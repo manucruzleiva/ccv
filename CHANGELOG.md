@@ -7,6 +7,7 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 ## [0.6.0] — 2026-05-03
 
 ### Added
+- App icon (`assets/icon.ico`, multi-resolution 16/32/48/64/256) generated from `assets/icon.png` and embedded into `ccv.exe` by PyInstaller.
 - README: keyboard / mouse shortcuts reference (F11, F12, Esc, video gestures, Ctrl+click button shortcuts).
 - `.github/FUNDING.yml` pointing to GitHub Sponsors (`manucruzleiva`); repo's Sponsor button is enabled.
 - Project renamed: `Switch Capture` → **CCV (Capture Card Viewer)**.

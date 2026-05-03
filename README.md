@@ -19,17 +19,6 @@ Lightweight Windows client for USB capture cards (Switch, PS5, Xbox, retro conso
 
 Grab `ccv.exe` from the [Releases](https://github.com/manucruzleiva/ccv/releases) page and run it. Standalone — bundled ffmpeg/ffplay, no Python or system-wide install needed.
 
-CLI subcommands (optional):
-
-```
-ccv.exe             # GUI (default)
-ccv.exe preview     # preview-only via terminal
-ccv.exe screenshot  # one-shot capture
-ccv.exe record      # record until Enter
-ccv.exe devices     # list DirectShow devices
-ccv.exe shortcut    # create a Desktop .lnk
-```
-
 ## Shortcuts
 
 **Keyboard**
