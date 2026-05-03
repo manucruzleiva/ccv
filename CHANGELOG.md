@@ -4,6 +4,11 @@ All notable changes to **CCV — Capture Card Viewer** are documented here.
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Release workflow no longer crashes when the CHANGELOG section for the tag contains backticks. The notes are now written directly to `release-notes.md` and passed via `--notes-file` instead of being interpolated through `${{ }}` into a bash string (which caused commands like `\`PrintScreen\`` to be evaluated by the shell).
+
 ## [0.7.0] — 2026-05-03
 
 ### Added
