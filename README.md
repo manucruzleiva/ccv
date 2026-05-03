@@ -15,37 +15,45 @@ Lightweight Windows client for USB capture cards (Switch, PS5, Xbox, retro conso
 - **i18n** — Spanish and English live-switchable; help text and tooltips re-resolve at hover time.
 - **Light & dark themes** — switchable live, no restart.
 
-## Install / run
+## Download
 
-Python 3.11+ on Windows.
+Grab `ccv.exe` from the [Releases](https://github.com/manucruzleiva/ccv/releases) page and run it. Standalone — bundled ffmpeg/ffplay, no Python or system-wide install needed.
 
-```
-pip install -r requirements.txt
-python ccv.py
-```
-
-`ccv.py` looks for `ffmpeg.exe` and `ffplay.exe` either on `PATH` or under `bin/` next to the script. Drop a static-build of ffmpeg into `bin/` if you don't want a system-wide install.
-
-CLI subcommands:
+CLI subcommands (optional):
 
 ```
-ccv.py             # GUI (default)
-ccv.py preview     # preview-only via terminal
-ccv.py screenshot  # one-shot capture
-ccv.py record      # record until Enter
-ccv.py devices     # list DirectShow devices
-ccv.py shortcut    # create a Desktop .lnk
-ccv.py build       # produce ccv.exe via PyInstaller
+ccv.exe             # GUI (default)
+ccv.exe preview     # preview-only via terminal
+ccv.exe screenshot  # one-shot capture
+ccv.exe record      # record until Enter
+ccv.exe devices     # list DirectShow devices
+ccv.exe shortcut    # create a Desktop .lnk
 ```
 
-## Build a Windows .exe
+## Shortcuts
 
-```
-python ccv.py build           # --onefile (portable, ~135 MB with bundled ffmpeg)
-python ccv.py build --onedir  # --onedir (instant startup, same total size)
-```
+**Keyboard**
 
-The build bundles `bin/ffmpeg.exe`, `bin/ffplay.exe`, and the contents of `assets/` into the executable, so the resulting `ccv.exe` runs standalone.
+| Key   | Action                                               |
+|-------|------------------------------------------------------|
+| `F11` | Toggle fullscreen                                    |
+| `F12` | Hide window to tray                                  |
+| `Esc` | Exit focus mode (and exit fullscreen if active)      |
+
+**Mouse — over the video**
+
+| Gesture           | Action                                         |
+|-------------------|------------------------------------------------|
+| Double-click      | Toggle focus mode (sidebar slides out)         |
+| Scroll wheel      | Volume ±5% per step                            |
+| Middle-click      | Toggle mute                                    |
+
+**Mouse — over the action buttons**
+
+| Gesture                   | Action                            |
+|---------------------------|-----------------------------------|
+| `Ctrl` + click on `📷`    | Open the screenshots folder       |
+| `Ctrl` + click on `⏺`     | Open the recordings folder        |
 
 ## Config
 
