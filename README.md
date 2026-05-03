@@ -1,23 +1,35 @@
 # CCV — Capture Card Viewer
 
-Lightweight Windows client for USB capture cards (Switch, PS5, Xbox, retro consoles…). Single Python file, embeds ffplay's preview inside a tkinter window and uses ffmpeg for recording — no OBS, no Electron, no browser engine. Roughly 50 MB of memory at runtime.
+**A tiny app for watching and recording your Switch, PS5, Xbox, or any USB capture card on Windows.**
+
+No bloated launcher, no browser engine, no setup — just download the `.exe`, plug in your capture card, and play. Uses about 50 MB of RAM, opens in a couple of seconds.
 
 ![screenshot placeholder](assets/screenshot.png)
 
-## Features
+## Why CCV
 
-- **Embedded preview** — ffplay is reparented into the main window via Win32 `SetParent`. No second window, no flash on toggle.
-- **Seamless recording** — start/stop the recorder without restarting the preview. A Python tee replicates the master ffmpeg matroska stream to multiple consumers (preview + recorder) and replays the init segment for mid-stream pickup.
-- **Low latency tuning** — `nobuffer`, `low_delay`, `flush_packets`, 100 ms matroska clusters.
-- **Live volume / mute** — scroll wheel over the video. Middle-click to mute. Volume changes apply live via Windows audio sessions (`pycaw`), not by restarting ffplay.
-- **Focus mode** — double-click the video, sidebar slides out, video fills the window. Win32 fast-path keeps ffplay smooth during the animation.
-- **Persistent layout** — panel order, collapsed states, window geometry, and all settings survive across sessions.
-- **i18n** — Spanish and English live-switchable; help text and tooltips re-resolve at hover time.
-- **Light & dark themes** — switchable live, no restart.
+If you own a USB capture card, your two big options today are OBS (powerful but built for streamers, takes a while to learn and a lot of memory to run) or the bundled vendor app (often clunky, sometimes broken on modern Windows). CCV is the in-between: open the window, see your console, hit record when you want, close the window when you're done.
 
-## Download
+It's just a video preview + a record button. That's it. That's the pitch.
 
-Grab `ccv.exe` from the [Releases](https://github.com/manucruzleiva/ccv/releases) page and run it. Standalone — bundled ffmpeg/ffplay, no Python or system-wide install needed.
+## Get it
+
+**[⬇ Download `ccv.exe`](https://github.com/manucruzleiva/ccv/releases/latest)** — single file, ~135 MB, no installer needed. Everything required (including ffmpeg) is bundled inside.
+
+Just save it anywhere (Desktop, Downloads, a USB stick…) and double-click to run.
+
+> **First time?** Windows might warn that the app is "unrecognized" because it's not signed with a paid Microsoft certificate. Click **More info → Run anyway**. The source code is right here in this repo if you want to inspect it before running.
+
+## What you can do
+
+- **Watch your console** — embedded preview inside the app window, with audio. Smooth, low-latency.
+- **Record gameplay** — hit ⏺ to start, hit it again to stop. Saves to your Videos folder.
+- **Take screenshots** — hit 📷. Grabs straight from the live preview, no console interruption.
+- **Focus mode** — double-click the video and the sidebar slides away so the gameplay fills the window.
+- **Live volume / mute** — scroll wheel over the video to change volume, middle-click to mute.
+- **Light or dark** — pick your theme from the System panel, switches instantly.
+- **English / Español** — pick your language, also live.
+- **Remembers everything** — your panel layout, window size, and settings survive across sessions.
 
 ## Shortcuts
 
@@ -44,38 +56,21 @@ Grab `ccv.exe` from the [Releases](https://github.com/manucruzleiva/ccv/releases
 | `Ctrl` + click on `📷`    | Open the screenshots folder       |
 | `Ctrl` + click on `⏺`     | Open the recordings folder        |
 
-## Config
+## I have a problem
 
-User preferences live at `~/.ccv.json` and include device choices, codec settings, theme, language, panel order, collapsed states, window geometry. The first launch migrates an older `~/.switch_capture.json` automatically.
+- **No video shows up** — make sure your capture card is plugged in *before* opening CCV, and pick the right device in the **Capture** panel dropdown.
+- **No sound** — same deal, pick the audio device in the **Capture** panel. Some cards expose video and audio as separate USB devices.
+- **Recording is choppy** — the **Diagnostics** panel inside the app will tell you if your settings are too heavy for your hardware.
+- **Something else** — open an [issue](https://github.com/manucruzleiva/ccv/issues) and tell me what happened.
 
-## Architecture sketch
+## Like it?
 
-```
-                  ┌────────────────────────────┐
-                  │ master ffmpeg (dshow)      │
-                  │  -c:v copy  -c:a pcm_s16le │
-                  │  matroska → stdout         │
-                  └──────────────┬─────────────┘
-                                 │
-                       ┌─────────▼──────────┐
-                       │ Python _StreamTee  │
-                       │  (init segment +   │
-                       │   per-consumer Q)  │
-                       └────┬────────┬──────┘
-                            │        │
-                  ┌─────────▼─┐    ┌─▼──────────────┐
-                  │ ffplay    │    │ ffmpeg recorder │
-                  │ (preview) │    │ (re-encode)     │
-                  └───────────┘    └─────────────────┘
-```
+If CCV saves you time, you can [sponsor the project on GitHub](https://github.com/sponsors/manucruzleiva). Totally optional, very appreciated.
+
+## Tech / contributing
+
+If you want to look under the hood, build from source, contribute, or understand how the embedded preview works, see **[DEVELOPMENT.md](DEVELOPMENT.md)**.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
-
-## Credits
-
-- ffmpeg / ffplay — https://ffmpeg.org
-- pycaw — Windows Core Audio bindings
-- Pillow — clipboard / image conversion
-- pywin32 — Win32 clipboard and shortcut helpers
+MIT — see [LICENSE](LICENSE). Free to use, modify, share.

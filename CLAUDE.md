@@ -2,6 +2,8 @@
 
 This file is read automatically by Claude Code (and similar coding agents) when they enter the repo. Anything here is treated as a binding instruction for how to work on the project.
 
+For full project context (architecture, build, internals, contributing), read [DEVELOPMENT.md](DEVELOPMENT.md). For the user-facing intro, see [README.md](README.md). The file below is intentionally short and only covers the rules that are easy to violate.
+
 ## Hard rules
 
 ### 1. Always update the changelog
@@ -14,19 +16,17 @@ Whenever you add a feature, fix a bug, change behavior, or refactor anything use
 
 ### 2. Bump the version on every release
 
-[ccv.py](ccv.py) holds `APP_VERSION` near the top of the file. Bump it according to SemVer:
+[ccv.py](ccv.py) holds `APP_VERSION` near the top of the file. Bump it according to SemVer (see [DEVELOPMENT.md](DEVELOPMENT.md#semver) for the breakdown). When you bump `APP_VERSION`, also add the matching `## [X.Y.Z] — YYYY-MM-DD` heading in `CHANGELOG.md` and the link reference at the bottom of that file.
 
-- **MAJOR** — breaking change to config schema, CLI, or supported platforms.
-- **MINOR** — new feature or non-trivial behavior change.
-- **PATCH** — bug fix, perf tweak, or doc-only change.
+### 3. Releases are built by CI, not by hand
 
-When you bump `APP_VERSION`, also update the matching `## [X.Y.Z] — YYYY-MM-DD` heading in `CHANGELOG.md` and the link reference at the bottom of that file.
+Pushing a tag matching `v*` triggers [`.github/workflows/release.yml`](.github/workflows/release.yml), which builds `ccv.exe` on a Windows runner and publishes a GitHub Release with the `.exe` attached. Don't run `python ccv.py build` and `gh release create` manually unless CI is broken — divergence between hand-built and CI-built binaries is a maintenance trap.
 
-### 3. The version label in the GUI links to the GitHub CHANGELOG
+### 4. The version label in the GUI links to the GitHub CHANGELOG
 
 Don't reintroduce an in-app changelog popup. Clicking the version label in the **System** panel opens `APP_CHANGELOG_URL` (`https://github.com/manucruzleiva/ccv/blob/main/CHANGELOG.md`) in the user's default browser. The single source of truth for release notes is the file in the repo.
 
-### 4. Author identity for commits inside this repo
+### 5. Author identity for commits inside this repo
 
 The repo-local `git config` is set to:
 ```
@@ -35,22 +35,7 @@ user.email = 153244278+manucruzleiva@users.noreply.github.com
 ```
 Don't change these and don't commit with a global identity that exposes a real email.
 
-## Project shape
-
-- Single-file Python app: `ccv.py` (~4500 lines). Tkinter GUI + ffmpeg/ffplay subprocesses.
-- `bin/` holds local ffmpeg builds — gitignored, distributed via release asset, not via the repo.
-- `assets/` holds the icon (`icon.png`, `icon.ico`) bundled into the .exe by PyInstaller.
-- `~/.ccv.json` is the per-user config; `~/.switch_capture.json` is auto-migrated on first launch.
-
-## How to ship a release
-
-1. Bump `APP_VERSION` in `ccv.py`.
-2. Add a section in `CHANGELOG.md` for that version.
-3. Commit + push.
-4. `python ccv.py build` → produces `ccv.exe` (~135 MB, includes bundled ffmpeg).
-5. `gh release create v$VER ccv.exe --title "CCV v$VER" --notes-file release-notes.md` (or use `--notes` inline pulling from CHANGELOG).
-
-## Don'ts
+## Don'ts (style)
 
 - Don't add `messagebox` popups for non-blocking info — prefer toasts or status bar.
 - Don't bake palette colors into `ttk.Label(... foreground=...)` literals; use a named style configured by `_init_styles()` so theme toggle works.
