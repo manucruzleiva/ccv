@@ -35,6 +35,17 @@ user.email = 153244278+manucruzleiva@users.noreply.github.com
 ```
 Don't change these and don't commit with a global identity that exposes a real email.
 
+### 6. Commit messages must be clear and explain the *why*
+
+Every commit message has a one-line subject (~70 chars max, imperative mood, no trailing period) followed by a body that describes the change in enough detail that a future reader doesn't have to read the diff to understand it.
+
+- **Subject** — what the commit does, in one line. Don't dump file names; describe the user/dev-visible effect. Examples: `Reduce stop-record latency from 15s to <3s`, `Drop the in-app changelog popup`. Avoid generic openers like `Update X` or `Fix bug`.
+- **Body** — wrap at ~72 chars. If the change spans more than one concern, use a bullet per concern. State the *why* and any non-obvious tradeoff, not just the *what*. The diff already shows what; the message has to add context the diff can't carry: motivation, prior incident, alternatives rejected, follow-up TODOs.
+- **Don't paste commit hashes, issue links, or `Co-Authored-By` lines unless the user asked.** Don't write summaries that just recapitulate file names — those are visible in `git log --stat`.
+- **Bad:** `Update README and add workflow`. **Good:** `Add CI release pipeline + rewrite README for end users` followed by a short body that says why the docs were split and what the workflow does.
+
+A commit message is the only piece of context that travels with the commit forever. Treat it like documentation, not a confirmation receipt.
+
 ## Don'ts (style)
 
 - Don't add `messagebox` popups for non-blocking info — prefer toasts or status bar.
