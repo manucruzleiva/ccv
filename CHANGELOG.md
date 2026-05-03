@@ -7,6 +7,8 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 ## [0.6.0] — 2026-05-03
 
 ### Added
+- `PrintScreen` keyboard shortcut: triggers a screenshot when the CCV window is focused (no-op when preview is not running). Tooltip on the 📷 button mentions the shortcut.
+- New **Output folders** sidebar panel (`sec.folders`) consolidates the screenshot and video destination paths in one place. README messaging now positions CCV as "play and record your console inside Windows" rather than "watch".
 - GitHub Actions workflow ([`.github/workflows/release.yml`](.github/workflows/release.yml)): builds `ccv.exe` on `windows-latest` and publishes a GitHub Release with the `.exe` attached on every `v*` tag push (also runs manually via workflow_dispatch).
 - [DEVELOPMENT.md](DEVELOPMENT.md) — architecture, build, internals, contributing. README is now a friendly user-facing intro; CLAUDE.md is trimmed to agent rules and points at DEVELOPMENT.md for context.
 - App icon (`assets/icon.ico`, multi-resolution 16/32/48/64/256) generated from `assets/icon.png` and embedded into `ccv.exe` by PyInstaller.
@@ -21,6 +23,7 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 - Auto-migration: `~/.switch_capture.json` → `~/.ccv.json` on first launch.
 
 ### Changed
+- Path inputs for `screenshot_dir` and `video_dir` moved out of the **Captura** / **Grabación** panels into the dedicated **Carpetas de salida** panel — single source of truth for output destinations, less duplicated UI.
 - `?` help button replaced with hover tooltip (no more popup interruption).
 - `_StreamTee.remove_recorder` now closes recorder stdin directly (EOF immediate) instead of waiting for the queue to drain — stop-record latency drops from up to 15s to <3s.
 - Recorder tags output as `bt709` TV-range to match preview color reproduction.

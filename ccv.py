@@ -112,7 +112,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "tt.mute":       "Mute / unmute del audio de la vista previa.\nTambien: click rueda del mouse sobre el video.",
         "tt.popup":      "Modo focus: oculta los menus, el video llena la ventana.\nDoble-click sobre el video o Esc para volver.",
         "tt.preview":    "Iniciar / cerrar la vista previa con audio.\nMientras esta activa puedes capturar y grabar sin cerrarla.",
-        "tt.screenshot": "Capturar el frame actual.\nToma del buffer del preview (instantaneo).\n\nCtrl+Click: abrir la carpeta de capturas.",
+        "tt.screenshot": "Capturar el frame actual.\nToma del buffer del preview (instantaneo).\n\nAtajo: PrintScreen.\nCtrl+Click: abrir la carpeta de capturas.",
         "tt.record":     "Iniciar / detener grabacion de video + audio.\nLa preview no se interrumpe (el master ffmpeg sigue corriendo).\n\nCtrl+Click: abrir la carpeta de grabaciones.",
         # secciones
         "sec.devices":       "Dispositivos",
@@ -120,6 +120,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "sec.preview_audio": "Vista previa y audio",
         "sec.capture":       "Captura de pantalla",
         "sec.recording":     "Grabacion",
+        "sec.folders":       "Carpetas de salida",
         "sec.system":        "Sistema",
         # sistema
         "sys.state":         "Estado:",
@@ -139,6 +140,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "lbl.bitrate":       "Bitrate audio",
         "lbl.container":     "Contenedor",
         "lbl.folder":        "Carpeta",
+        "lbl.shots_dir":     "Capturas",
+        "lbl.videos_dir":    "Videos",
         "lbl.clipboard":     "Copiar al portapapeles",
         "lbl.png":           "Guardar archivo PNG",
         "lbl.fmt_active":    "Activo: {res} @ {fps}fps",
@@ -176,13 +179,14 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "tt.mute":       "Mute / unmute the preview audio.\nAlso: middle-click on the video.",
         "tt.popup":      "Focus mode: hides menus, video fills the window.\nDouble-click on video or Esc to return.",
         "tt.preview":    "Start / close preview with audio.\nWhile active you can capture and record without closing it.",
-        "tt.screenshot": "Capture the current frame.\nTaken from the preview buffer (instant).\n\nCtrl+Click: open captures folder.",
+        "tt.screenshot": "Capture the current frame.\nTaken from the preview buffer (instant).\n\nShortcut: PrintScreen.\nCtrl+Click: open captures folder.",
         "tt.record":     "Start / stop video + audio recording.\nThe preview is never interrupted (master ffmpeg keeps running).\n\nCtrl+Click: open recordings folder.",
         "sec.devices":       "Devices",
         "sec.quality":       "Quality",
         "sec.preview_audio": "Preview & audio",
         "sec.capture":       "Screen capture",
         "sec.recording":     "Recording",
+        "sec.folders":       "Output folders",
         "sec.system":        "System",
         "sys.state":         "State:",
         "sys.diagnostics":   "Diagnostics:",
@@ -200,6 +204,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "lbl.bitrate":       "Audio bitrate",
         "lbl.container":     "Container",
         "lbl.folder":        "Folder",
+        "lbl.shots_dir":     "Screenshots",
+        "lbl.videos_dir":    "Videos",
         "lbl.clipboard":     "Copy to clipboard",
         "lbl.png":           "Save PNG file",
         "lbl.fmt_active":    "Active: {res} @ {fps}fps",
@@ -2100,6 +2106,9 @@ def run_gui(cfg: dict) -> None:
                 elif self._fullscreen:
                     self._toggle_fullscreen()
             self.bind("<Escape>", _on_escape)
+            # PrintScreen → screenshot. No-op si la preview no esta activa
+            # (_screenshot ya valida is_running).
+            self.bind("<Print>", lambda e: self._screenshot())
 
             # Mostrar ahora que esta todo construido + setear taskbar icon
             self.after_idle(self._show_initial)
@@ -3021,6 +3030,7 @@ def run_gui(cfg: dict) -> None:
             self._build_preview_audio()
             self._build_capture()
             self._build_recording()
+            self._build_folders()  # destinos de salida (capturas + videos)
             self._build_system()  # status + diagnostico + sistema integrados
             # Restaurar target para evitar bugs
             self._target = self
@@ -3729,8 +3739,16 @@ def run_gui(cfg: dict) -> None:
             self._add_check(f, r, "Guardar archivo PNG",
                              "screenshot_to_file",
                              label_key="lbl.png"); r += 1
-            self._add_path(f, r, "Carpeta", "screenshot_dir",
-                            label_key="lbl.folder"); r += 1
+            f.grid_columnconfigure(1, weight=1)
+
+        # ===== Carpetas de salida =====
+        def _build_folders(self) -> None:
+            f = self._make_section("Carpetas de salida", key="sec.folders")
+            r = 0
+            self._add_path(f, r, "Capturas", "screenshot_dir",
+                            label_key="lbl.shots_dir"); r += 1
+            self._add_path(f, r, "Videos", "video_dir",
+                            label_key="lbl.videos_dir"); r += 1
             f.grid_columnconfigure(1, weight=1)
 
         # ===== Grabacion =====
@@ -3761,8 +3779,6 @@ def run_gui(cfg: dict) -> None:
             self._add_combo(f, r, "Contenedor", "container",
                              ["mkv", "mp4"],
                              label_key="lbl.container"); r += 1
-            self._add_path(f, r, "Carpeta", "video_dir",
-                            label_key="lbl.folder"); r += 1
             f.grid_columnconfigure(1, weight=1)
 
         # ===== Sistema (status + diagnostico + version) =====
