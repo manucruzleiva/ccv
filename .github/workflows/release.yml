@@ -88,32 +88,33 @@ jobs:
           name: ccv-exe
 
       - name: Extract release notes from CHANGELOG
-        id: notes
         shell: bash
         run: |
-          tag="${GITHUB_REF_NAME}"          # e.g. v0.6.0
-          ver="${tag#v}"                    # e.g. 0.6.0
-          {
-            echo 'body<<__EOF__'
-            awk -v ver="$ver" '
-              $0 ~ ("^## \\[" ver "\\]")     { capture = 1; next }
-              capture && /^## \[/            { exit }
-              capture                        { print }
-            ' CHANGELOG.md
-            echo '__EOF__'
-          } >> "$GITHUB_OUTPUT"
+          tag="${GITHUB_REF_NAME}"          # e.g. v0.7.0
+          ver="${tag#v}"                    # e.g. 0.7.0
+          # Write the matching CHANGELOG section straight to a file. We
+          # intentionally avoid round-tripping through ${{ }} expansion
+          # in a later run-step because the body contains backticks
+          # (markdown code) that bash would try to execute.
+          awk -v ver="$ver" '
+            $0 ~ ("^## \\[" ver "\\]")     { capture = 1; next }
+            capture && /^## \[/            { exit }
+            capture                        { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            printf 'Release %s. See [CHANGELOG.md](https://github.com/%s/blob/main/CHANGELOG.md) for details.\n' \
+              "$tag" "${{ github.repository }}" > release-notes.md
+          fi
+          echo "----- release notes preview -----"
+          cat release-notes.md
+          echo "----- end -----"
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag="${GITHUB_REF_NAME}"
-          ver="${tag#v}"
-          notes="${{ steps.notes.outputs.body }}"
-          if [ -z "$notes" ]; then
-            notes="Release $tag. See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details."
-          fi
           gh release create "$tag" ccv.exe \
             --repo "${{ github.repository }}" \
             --title "CCV $tag" \
-            --notes "$notes"
+            --notes-file release-notes.md
