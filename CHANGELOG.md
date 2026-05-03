@@ -7,6 +7,7 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 ## [0.6.0] — 2026-05-03
 
 ### Added
+- `.github/FUNDING.yml` pointing to GitHub Sponsors (`manucruzleiva`); repo's Sponsor button is enabled.
 - Project renamed: `Switch Capture` → **CCV (Capture Card Viewer)**.
 - Window/taskbar icon support via `assets/icon.ico` + `assets/icon.png`. Sets `AppUserModelID` so Windows groups the app under its own taskbar icon instead of inheriting Python's.
 - Persistent layout: panel order, collapsed/expanded states, window geometry survive across sessions.
