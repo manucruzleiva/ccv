@@ -7,6 +7,7 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 ## [Unreleased]
 
 ### Fixed
+- Window resize by dragging the border is no longer laggy. During the drag, the embedded ffplay HWND is now moved with `SetWindowPos(SWP_NOREDRAW)` (the same fast-path used by the sidebar slide animation) instead of forcing a `MoveWindow(repaint=True)` + `WM_SIZE` per `<Configure>` event. Mouse-up triggers one final repainted sync so the final frame is sharp at the new size.
 - Release workflow YAML no longer fails to parse. The previous fix added a comment that contained the literal `${{ }}` token sequence, which GitHub Actions evaluates as an empty templating expression and refuses to schedule. Comment rephrased to describe the same behavior without that token.
 - Release workflow no longer crashes when the CHANGELOG section for the tag contains backticks. The notes are now written to `release-notes.md` and passed via `--notes-file` instead of being interpolated into a bash string (which caused tokens like `\`PrintScreen\`` to be evaluated by the shell).
 

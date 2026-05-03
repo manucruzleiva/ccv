@@ -2903,9 +2903,20 @@ def run_gui(cfg: dict) -> None:
             self.geometry(f"+{nx}+{ny}")
 
         def _end_drag(self, event) -> None:
+            was_resizing = self._resize_active
             self._drag_active = False
             self._drag_committed = False
             self._resize_active = False
+            if was_resizing:
+                # Cancela cualquier sync pendiente (probablemente fast=True
+                # del loop de resize) y forza una resync inmediata con
+                # repaint, asi ffplay/SDL pinta nitido al tamano final.
+                pending = self._sync_embed_after
+                if pending is not None:
+                    try: self.after_cancel(pending)
+                    except Exception: pass
+                    self._sync_embed_after = None
+                self._do_sync_embed(fast=False)
 
         # ---------- state queries ----------
         def is_running(self) -> bool:
@@ -3128,7 +3139,12 @@ def run_gui(cfg: dict) -> None:
             if w < 50 or h < 50: return
             new_rect = (x, y, w, h)
             if new_rect == self._last_embed_rect: return
-            resize_hwnd_at(self._embedded_hwnd, x, y, w, h, fast=fast)
+            # Mientras el usuario esta arrastrando un borde para
+            # redimensionar, evitamos forzar repaint del HWND embebido en
+            # cada Configure. _end_drag dispara una resync explicita con
+            # fast=False al soltar para que SDL repinte al tamano final.
+            use_fast = fast or self._resize_active
+            resize_hwnd_at(self._embedded_hwnd, x, y, w, h, fast=use_fast)
             self._last_embed_rect = new_rect
 
         def _make_section(self, title: str, key: str | None = None):
