@@ -1,0 +1,119 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag name (e.g. v0.6.0). Leave blank to build without publishing.'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Download ffmpeg / ffplay / ffprobe (BtbN GPL build)
+        shell: pwsh
+        run: |
+          $url = 'https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip'
+          $zip = Join-Path $env:RUNNER_TEMP 'ffmpeg.zip'
+          Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+          Expand-Archive -Path $zip -DestinationPath $env:RUNNER_TEMP -Force
+          $extracted = Get-ChildItem $env:RUNNER_TEMP -Directory | Where-Object Name -Like 'ffmpeg-*-win64-gpl' | Select-Object -First 1
+          New-Item -ItemType Directory -Force -Path bin | Out-Null
+          Copy-Item -Force (Join-Path $extracted.FullName 'bin\ffmpeg.exe')  bin\
+          Copy-Item -Force (Join-Path $extracted.FullName 'bin\ffplay.exe')  bin\
+          Copy-Item -Force (Join-Path $extracted.FullName 'bin\ffprobe.exe') bin\
+          Get-ChildItem bin\ | Format-Table Name, Length
+
+      - name: Build ccv.exe
+        run: python ccv.py build
+
+      - name: Verify build output
+        shell: pwsh
+        run: |
+          if (-not (Test-Path 'ccv.exe')) {
+            Write-Error 'ccv.exe was not produced'
+            exit 1
+          }
+          $sizeMB = [math]::Round((Get-Item ccv.exe).Length / 1MB, 1)
+          Write-Output "ccv.exe size: $sizeMB MB"
+          if ($sizeMB -lt 50) {
+            Write-Error "ccv.exe is suspiciously small ($sizeMB MB) — bundled ffmpeg likely missing"
+            exit 1
+          }
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ccv-exe
+          path: ccv.exe
+          retention-days: 14
+
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout (for CHANGELOG)
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ccv-exe
+
+      - name: Extract release notes from CHANGELOG
+        id: notes
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME}"          # e.g. v0.6.0
+          ver="${tag#v}"                    # e.g. 0.6.0
+          {
+            echo 'body<<__EOF__'
+            awk -v ver="$ver" '
+              $0 ~ ("^## \\[" ver "\\]")     { capture = 1; next }
+              capture && /^## \[/            { exit }
+              capture                        { print }
+            ' CHANGELOG.md
+            echo '__EOF__'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          ver="${tag#v}"
+          notes="${{ steps.notes.outputs.body }}"
+          if [ -z "$notes" ]; then
+            notes="Release $tag. See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details."
+          fi
+          gh release create "$tag" ccv.exe \
+            --repo "${{ github.repository }}" \
+            --title "CCV $tag" \
+            --notes "$notes"

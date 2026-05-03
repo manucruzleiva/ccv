@@ -4,6 +4,19 @@ All notable changes to **CCV — Capture Card Viewer** are documented here.
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] — 2026-05-03
+
+### Added
+- `PrintScreen` keyboard shortcut: triggers a screenshot when the CCV window is focused (no-op when preview is not running). Tooltip on the 📷 button mentions the shortcut.
+- New **Output folders** sidebar panel (`sec.folders`) — single, dedicated place to set the destination directories for screenshots and recordings.
+- GitHub Actions workflow ([`.github/workflows/release.yml`](.github/workflows/release.yml)): builds `ccv.exe` on `windows-latest` and publishes a GitHub Release with the `.exe` attached on every `v*` tag push (also runs manually via workflow_dispatch). Manual hand-built releases are no longer the supported path.
+- [DEVELOPMENT.md](DEVELOPMENT.md) — architecture, stack, dev setup, build process, code conventions, troubleshooting. CLAUDE.md is trimmed to agent-specific rules and points at DEVELOPMENT.md for context.
+- README rewritten as a user-facing pitch: "play and record your console inside Windows" framing, comparison vs OBS / vendor apps, FAQ section, sponsor CTA. Repo About description updated to match.
+- CLAUDE.md rule: commit messages must explain the *why*, not just the what.
+
+### Changed
+- Path inputs for `screenshot_dir` and `video_dir` moved out of the **Captura** / **Grabación** panels into the new **Carpetas de salida** panel — one place to manage output locations, no duplicated UI.
+
 ## [0.6.0] — 2026-05-03
 
 ### Added
@@ -103,6 +116,7 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 - ffmpeg auto-installer and Desktop shortcut.
 - CLI subcommands: `preview`, `screenshot`, `record`, `install`, `build`, `devices`.
 
+[0.7.0]: https://github.com/manucruzleiva/ccv/releases/tag/v0.7.0
 [0.6.0]: https://github.com/manucruzleiva/ccv/releases/tag/v0.6.0
 [0.5.0]: https://github.com/manucruzleiva/ccv/releases/tag/v0.5.0
 [0.4.0]: https://github.com/manucruzleiva/ccv/releases/tag/v0.4.0
