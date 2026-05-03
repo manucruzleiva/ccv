@@ -7,7 +7,8 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 ## [Unreleased]
 
 ### Fixed
-- Release workflow no longer crashes when the CHANGELOG section for the tag contains backticks. The notes are now written directly to `release-notes.md` and passed via `--notes-file` instead of being interpolated through `${{ }}` into a bash string (which caused commands like `\`PrintScreen\`` to be evaluated by the shell).
+- Release workflow YAML no longer fails to parse. The previous fix added a comment that contained the literal `${{ }}` token sequence, which GitHub Actions evaluates as an empty templating expression and refuses to schedule. Comment rephrased to describe the same behavior without that token.
+- Release workflow no longer crashes when the CHANGELOG section for the tag contains backticks. The notes are now written to `release-notes.md` and passed via `--notes-file` instead of being interpolated into a bash string (which caused tokens like `\`PrintScreen\`` to be evaluated by the shell).
 
 ## [0.7.0] — 2026-05-03
 
