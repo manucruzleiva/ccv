@@ -4,7 +4,7 @@ All notable changes to **CCV — Capture Card Viewer** are documented here.
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.1] — 2026-05-03
 
 ### Fixed
 - Window resize by dragging the border is no longer laggy. During the drag, the embedded ffplay HWND is now moved with `SetWindowPos(SWP_NOREDRAW)` (the same fast-path used by the sidebar slide animation) instead of forcing a `MoveWindow(repaint=True)` + `WM_SIZE` per `<Configure>` event. Mouse-up triggers one final repainted sync so the final frame is sharp at the new size.
@@ -123,6 +123,7 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 - ffmpeg auto-installer and Desktop shortcut.
 - CLI subcommands: `preview`, `screenshot`, `record`, `install`, `build`, `devices`.
 
+[0.7.1]: https://github.com/manucruzleiva/ccv/releases/tag/v0.7.1
 [0.7.0]: https://github.com/manucruzleiva/ccv/releases/tag/v0.7.0
 [0.6.0]: https://github.com/manucruzleiva/ccv/releases/tag/v0.6.0
 [0.5.0]: https://github.com/manucruzleiva/ccv/releases/tag/v0.5.0

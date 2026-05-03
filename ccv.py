@@ -63,7 +63,7 @@ if LOCAL_BIN is None:
 APP_NAME = "Capture Card Viewer"
 APP_NAME_SHORT = "CCV"
 APP_ID = "ccv"   # exe name, config filename, AppUserModelID suffix
-APP_VERSION = "0.7.0"
+APP_VERSION = "0.7.1"
 APP_AUMID = f"com.ccv.captureCardViewer"  # taskbar grouping en Windows
 APP_REPO_URL = "https://github.com/manucruzleiva/ccv"
 APP_CHANGELOG_URL = f"{APP_REPO_URL}/blob/main/CHANGELOG.md"
