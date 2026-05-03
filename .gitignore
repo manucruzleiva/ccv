@@ -1,0 +1,45 @@
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.venv/
+venv/
+env/
+
+# --- PyInstaller build artifacts ---
+_pyinstaller/
+build/
+dist/
+*.spec
+
+# --- App build outputs ---
+ccv.exe
+ccv/
+switch.exe
+switch/
+
+# --- Bundled binaries (heavy: distribuir aparte / via release) ---
+bin/
+
+# --- Runtime logs ---
+.last_master.log
+.last_preview.log
+.last_recorder.log
+*.log
+
+# --- Temporary recordings used in dev ---
+_test_*.mkv
+_test_*.mp4
+
+# --- IDE / editor ---
+.idea/
+.vscode/
+*.swp
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
