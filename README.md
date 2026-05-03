@@ -1,16 +1,19 @@
 # CCV — Capture Card Viewer
 
-**A tiny app for watching and recording your Switch, PS5, Xbox, or any USB capture card on Windows.**
+**Play and record your Switch, PS5, Xbox or any USB capture card directly inside Windows — no second TV, no extra HDMI input, no streaming overlay.**
 
-No bloated launcher, no browser engine, no setup — just download the `.exe`, plug in your capture card, and play. Uses about 50 MB of RAM, opens in a couple of seconds.
+Plug your console into a USB capture card, plug the card into your PC, open CCV, and your console runs in a window on your desktop. Play it like any other game, record clips when you want, screenshot with PrintScreen. Uses about 50 MB of RAM, opens in a couple of seconds, no installer.
 
 ![screenshot placeholder](assets/screenshot.png)
 
 ## Why CCV
 
-If you own a USB capture card, your two big options today are OBS (powerful but built for streamers, takes a while to learn and a lot of memory to run) or the bundled vendor app (often clunky, sometimes broken on modern Windows). CCV is the in-between: open the window, see your console, hit record when you want, close the window when you're done.
+You bought a capture card so you could play your console on your monitor (because the TV is busy, the kids are asleep, you only have the one display, your console lives in another room, whatever). The two existing options for actually doing that are:
 
-It's just a video preview + a record button. That's it. That's the pitch.
+- **OBS** — built for streamers. Powerful, but you have to set up a scene, configure sources, fight with the canvas, and it idles at 300+ MB of RAM.
+- **The vendor app that came with your card** — usually clunky, sometimes broken on modern Windows, and most of them have ads or upsells now.
+
+CCV is the in-between. Open the window. See your console. Play. Record when you want a clip. Hit PrintScreen when you want a screenshot. Close it when you're done. That's the entire app.
 
 ## Get it
 
@@ -22,9 +25,10 @@ Just save it anywhere (Desktop, Downloads, a USB stick…) and double-click to r
 
 ## What you can do
 
-- **Watch your console** — embedded preview inside the app window, with audio. Smooth, low-latency.
-- **Record gameplay** — hit ⏺ to start, hit it again to stop. Saves to your Videos folder.
-- **Take screenshots** — hit 📷. Grabs straight from the live preview, no console interruption.
+- **Play your console on your PC** — low-latency embedded preview with audio. Use your monitor, your headphones, your speakers. The console doesn't know it's not on a TV.
+- **Record gameplay** — hit ⏺ to start, hit it again to stop. Recording happens alongside the preview without interrupting it.
+- **Take screenshots** — hit `PrintScreen` (or click 📷). Grabs straight from the live preview, no console interruption.
+- **Pick where it all goes** — set your preferred Screenshots and Videos folders in the **Output folders** panel; configurable per-user.
 - **Focus mode** — double-click the video and the sidebar slides away so the gameplay fills the window.
 - **Live volume / mute** — scroll wheel over the video to change volume, middle-click to mute.
 - **Light or dark** — pick your theme from the System panel, switches instantly.
@@ -35,11 +39,12 @@ Just save it anywhere (Desktop, Downloads, a USB stick…) and double-click to r
 
 **Keyboard**
 
-| Key   | Action                                               |
-|-------|------------------------------------------------------|
-| `F11` | Toggle fullscreen                                    |
-| `F12` | Hide window to tray                                  |
-| `Esc` | Exit focus mode (and exit fullscreen if active)      |
+| Key           | Action                                               |
+|---------------|------------------------------------------------------|
+| `PrintScreen` | Take a screenshot                                    |
+| `F11`         | Toggle fullscreen                                    |
+| `F12`         | Hide window to tray                                  |
+| `Esc`         | Exit focus mode (and exit fullscreen if active)      |
 
 **Mouse — over the video**
 
@@ -58,8 +63,9 @@ Just save it anywhere (Desktop, Downloads, a USB stick…) and double-click to r
 
 ## I have a problem
 
-- **No video shows up** — make sure your capture card is plugged in *before* opening CCV, and pick the right device in the **Capture** panel dropdown.
-- **No sound** — same deal, pick the audio device in the **Capture** panel. Some cards expose video and audio as separate USB devices.
+- **No video shows up** — make sure your capture card is plugged in *before* opening CCV, and pick the right device in the **Devices** panel dropdown.
+- **No sound** — same deal, pick the audio device in the **Devices** panel. Some cards expose video and audio as separate USB devices.
+- **PrintScreen doesn't trigger CCV's screenshot** — make sure the CCV window is focused (click on it). On Windows 11, the system Snipping Tool can also pop up; that's a Windows Settings option (`Settings → Accessibility → Keyboard → "Use the Print screen key to open Snipping Tool"`) you can disable if you want PrintScreen to *only* trigger CCV.
 - **Recording is choppy** — the **Diagnostics** panel inside the app will tell you if your settings are too heavy for your hardware.
 - **Something else** — open an [issue](https://github.com/manucruzleiva/ccv/issues) and tell me what happened.
 
