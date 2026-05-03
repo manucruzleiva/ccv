@@ -92,10 +92,11 @@ jobs:
         run: |
           tag="${GITHUB_REF_NAME}"          # e.g. v0.7.0
           ver="${tag#v}"                    # e.g. 0.7.0
-          # Write the matching CHANGELOG section straight to a file. We
-          # intentionally avoid round-tripping through ${{ }} expansion
-          # in a later run-step because the body contains backticks
-          # (markdown code) that bash would try to execute.
+          # Write the matching CHANGELOG section straight to a file.
+          # Avoids round-tripping the body through Actions expression
+          # interpolation in a later run-step: the body contains
+          # backticks (markdown code) that bash would otherwise try to
+          # execute as command substitutions.
           awk -v ver="$ver" '
             $0 ~ ("^## \\[" ver "\\]")     { capture = 1; next }
             capture && /^## \[/            { exit }
