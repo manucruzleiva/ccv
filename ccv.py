@@ -65,6 +65,8 @@ APP_NAME_SHORT = "CCV"
 APP_ID = "ccv"   # exe name, config filename, AppUserModelID suffix
 APP_VERSION = "0.6.0"
 APP_AUMID = f"com.ccv.captureCardViewer"  # taskbar grouping en Windows
+APP_REPO_URL = "https://github.com/manucruzleiva/ccv"
+APP_CHANGELOG_URL = f"{APP_REPO_URL}/blob/main/CHANGELOG.md"
 
 CONFIG_PATH = Path.home() / f".{APP_ID}.json"
 # Compatibilidad: si existe el cfg viejo y no el nuevo, lo migramos.
@@ -234,53 +236,6 @@ def t(key: str, lang: str = "es", **fmt) -> str:
         try: return s.format(**fmt)
         except Exception: return s
     return s
-
-CHANGELOG = [
-    {"version": "0.5.0", "date": "2026-05-03", "changes": [
-        ("feature", "Mute toggle: click rueda del mouse sobre el video o boton 🔊/🔇 en el top bar."),
-        ("feature", "Control de volumen por scroll wheel sobre el video con overlay flotante."),
-        ("feature", "Botones X / maximizar / fullscreen / minimizar en top bar custom."),
-        ("feature", "Acciones (Preview, Captura, Grabar) movidas al top bar."),
-        ("feature", "Atajos: F11 fullscreen, F12 minimizar, Esc salir de fullscreen."),
-        ("perf",    "Optimizaciones de baja latencia (-fflags nobuffer, -flags low_delay, flush_packets)."),
-        ("perf",    "Debouncing de diagnostico, save al disco y resize del embed: UI mas fluida."),
-        ("fix",     "La ventana ya no se mueve al colapsar/expandir menus tras maximizar."),
-        ("fix",     "Click en headers de paneles ya no inicia drag accidental (return 'break')."),
-        ("fix",     "Drag con threshold de 5px anti-jitter."),
-    ]},
-    {"version": "0.4.0", "date": "2026-05-03", "changes": [
-        ("feature", "Tema dark/light con cambio en vivo (sin reabrir ventana)."),
-        ("feature", "Cabecera nativa del SO removida; controles custom + drag desde toda la ventana."),
-        ("feature", "Ctrl+Click sobre Captura/Grabar abre la carpeta correspondiente en el Explorador."),
-        ("feature", "Tooltips on hover en todos los botones."),
-        ("feature", "Tooltip en combos muestra el nombre de la variable cfg."),
-        ("feature", "Status en vivo y panel Diagnostico fusionados dentro de Sistema."),
-        ("fix",     "Icono visible en la barra de tareas (WS_EX_APPWINDOW)."),
-    ]},
-    {"version": "0.3.0", "date": "2026-05-02", "changes": [
-        ("feature", "Menus colapsables (▼/▶) y reordenables (↑/↓)."),
-        ("feature", "Sidebar derecha colapsable (▶/◀)."),
-        ("feature", "Vista previa embebida en la ventana principal (no mas ventana aparte)."),
-        ("feature", "Botones con emojis + tooltips."),
-        ("feature", "Botones de fix accionables en panel Diagnostico."),
-        ("perf",    "Embed se sincroniza al cambio de tamano de la ventana."),
-    ]},
-    {"version": "0.2.0", "date": "2026-05-02", "changes": [
-        ("feature", "Panel Diagnostico con warnings en vivo (resolucion no soportada, GPU sin NVENC, etc.)."),
-        ("feature", "Matriz Resolucion+FPS interactiva (click en celda verde aplica la combo)."),
-        ("feature", "Deteccion de GPU + advisor de codec en panel Grabacion."),
-        ("feature", "Captura desde el buffer del preview (sin tocar el device, instantaneo)."),
-        ("feature", "Grabacion en paralelo a la vista previa."),
-        ("fix",     "Captura del stderr de ffplay para mostrar errores reales en messagebox."),
-        ("fix",     "Cambio de stream de NUT a Matroska + audio re-encoded a PCM (fix 'Invalid argument' en muxer)."),
-    ]},
-    {"version": "0.1.0", "date": "2026-05-02", "changes": [
-        ("feature", "Cliente inicial con GUI tkinter compacta."),
-        ("feature", "Vista previa con audio, captura PNG (clipboard + archivo), grabacion video+audio."),
-        ("feature", "Auto-instalador de ffmpeg + acceso directo en el Escritorio."),
-        ("feature", "CLI subcomandos: preview, screenshot, record, install, build, devices."),
-    ]},
-]
 
 _IS_WIN = platform.system() == "Windows"
 
@@ -4106,84 +4061,15 @@ def run_gui(cfg: dict) -> None:
             self._set_status(("Acceso directo: " if ok else "Error: ") + info)
 
         def _show_changelog(self) -> None:
-            """Abre una ventana con el historial de versiones."""
-            win = tk.Toplevel(self)
-            win.title(f"{APP_NAME} — Historial de versiones")
-            win.geometry("620x620")
-            win.configure(bg=BG)
-            try: win.transient(self)
-            except Exception: pass
-
-            # Header
-            hdr = ttk.Frame(win, padding=(16, 14, 16, 8))
-            hdr.pack(fill="x")
-            ttk.Label(hdr, text="Historial de versiones",
-                       style="Title.TLabel").pack(anchor="w")
-            ttk.Label(hdr,
-                       text=f"{APP_NAME} · cliente para tarjeta capturadora",
-                       style="Sub.TLabel").pack(anchor="w")
-
-            ttk.Separator(win, orient="horizontal").pack(fill="x")
-
-            # Body con Text scrolleable
-            container = ttk.Frame(win)
-            container.pack(fill="both", expand=True, padx=16, pady=(8, 8))
-            txt = tk.Text(
-                container, bg=CARD, fg=TEXT,
-                font=("Segoe UI", 10), wrap="word",
-                padx=14, pady=12,
-                borderwidth=1, relief="solid",
-                highlightthickness=0,
-                spacing1=2, spacing3=4,
-            )
-            sb = ttk.Scrollbar(container, orient="vertical", command=txt.yview)
-            txt.configure(yscrollcommand=sb.set)
-            sb.pack(side="right", fill="y")
-            txt.pack(side="left", fill="both", expand=True)
-
-            txt.tag_configure("ver", font=("Segoe UI", 14, "bold"),
-                               foreground=ACCENT, spacing1=8, spacing3=2)
-            txt.tag_configure("date", foreground=SUB,
-                               font=("Segoe UI", 9), spacing3=6)
-            txt.tag_configure("feature", foreground=OK_FG,
-                               font=("Segoe UI", 9, "bold"))
-            txt.tag_configure("fix", foreground=ERR_FG,
-                               font=("Segoe UI", 9, "bold"))
-            txt.tag_configure("perf", foreground=ACCENT,
-                               font=("Segoe UI", 9, "bold"))
-            txt.tag_configure("desc", foreground=TEXT,
-                               font=("Segoe UI", 10))
-
-            kind_labels = {
-                "feature": "  feature  ",
-                "fix":     "    fix    ",
-                "perf":    "    perf   ",
-            }
-            for entry in CHANGELOG:
-                txt.insert("end", f"v{entry['version']}\n", "ver")
-                txt.insert("end", f"{entry['date']}\n", "date")
-                for kind, text in entry["changes"]:
-                    label = kind_labels.get(kind, f"  {kind}  ")
-                    txt.insert("end", label, kind)
-                    txt.insert("end", f"  {text}\n", "desc")
-                txt.insert("end", "\n")
-            txt.configure(state="disabled")
-
-            # Footer con boton cerrar
-            footer = ttk.Frame(win, padding=(16, 0, 16, 14))
-            footer.pack(fill="x")
-            ttk.Button(footer, text="Cerrar",
-                        command=win.destroy).pack(side="right")
-
-            # Centrar sobre la ventana principal
-            win.update_idletasks()
+            """Abre el CHANGELOG en GitHub en el browser default. Antes
+            era una ventana emergente con la lista local; ahora la
+            single source of truth es el archivo del repo."""
+            import webbrowser
             try:
-                px = self.winfo_rootx() + (self.winfo_width() - 620) // 2
-                py = self.winfo_rooty() + (self.winfo_height() - 620) // 2
-                win.geometry(f"+{max(0, px)}+{max(0, py)}")
-            except Exception: pass
-            try: win.lift(); win.focus_set()
-            except Exception: pass
+                webbrowser.open(APP_CHANGELOG_URL, new=2)
+                self._set_status(f"Abierto: {APP_CHANGELOG_URL}")
+            except Exception as e:
+                self._set_status(f"No pude abrir el browser: {e}")
 
         def _set_status(self, msg: str) -> None:
             self.var_status.set(msg)
