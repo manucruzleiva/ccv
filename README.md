@@ -39,7 +39,7 @@ Requires Windows 10 or 11 (64-bit). Checksums for every file are in `SHA256SUMS.
 - **Pick where it all goes** — set your preferred Screenshots and Videos folders in the **Output folders** panel; configurable per-user.
 - **Focus mode** — double-click the video and the sidebar slides away so the gameplay fills the window.
 - **Live volume / mute** — scroll wheel over the video to change volume, middle-click to mute.
-- **Light or dark** — pick your theme from the System panel, switches instantly.
+- **Dark or light** — dark by default; flip it from the sun/moon button in the sidebar toolbar, switches instantly.
 - **English / Español** — pick your language, also live.
 - **Remembers everything** — your panel layout, window size, and settings survive across sessions.
 

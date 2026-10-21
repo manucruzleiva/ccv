@@ -127,6 +127,7 @@ def _resolve_asset(rel: str) -> Path | None:
 
 ICON_ICO = _resolve_asset("icon.ico")
 ICON_PNG = _resolve_asset("icon.png")
+LOGO_PNG = _resolve_asset("logo-28.png")   # marca chica del header
 
 
 # --------------------------------------------------------------------------- #
@@ -205,7 +206,20 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "lbl.fmt_no_device": "(elige un dispositivo de video)",
         "lbl.fmt_unsupported": "(no soportado)",
         "lbl.fmt_picker_tip": "Elige resolucion + FPS soportado por tu capturadora.\nLa lista se filtra al hardware detectado.",
-        "lbl.video_placeholder": "(Inicia la vista previa para ver el video aqui)",
+        "lbl.video_placeholder": "Conecta tu consola",
+        "lbl.video_hint":    "Elige tu capturadora en Dispositivos y pulsa Iniciar vista previa.",
+        "lbl.no_device":     "Ningun dispositivo de video elegido",
+        # botones principales
+        "btn.preview_start": "Iniciar vista previa",
+        "btn.preview_stop":  "Detener vista previa",
+        "btn.screenshot":    "Captura",
+        "btn.record":        "Grabar",
+        "btn.record_stop":   "Detener",
+        # pastilla de estado
+        "pill.idle":         "Inactivo",
+        "pill.starting":     "Conectando...",
+        "pill.live":         "En vivo",
+        "pill.rec":          "REC {time}",
         # status
         "st.ready":             "Listo",
         "st.preview_active":    "Vista previa activa",
@@ -284,7 +298,18 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "lbl.fmt_no_device": "(choose a video device)",
         "lbl.fmt_unsupported": "(unsupported)",
         "lbl.fmt_picker_tip": "Pick a resolution + FPS supported by your capture card.\nThe list is filtered to the detected hardware.",
-        "lbl.video_placeholder": "(Start the preview to see video here)",
+        "lbl.video_placeholder": "Connect your console",
+        "lbl.video_hint":    "Pick your capture card under Devices and press Start preview.",
+        "lbl.no_device":     "No video device selected",
+        "btn.preview_start": "Start preview",
+        "btn.preview_stop":  "Stop preview",
+        "btn.screenshot":    "Screenshot",
+        "btn.record":        "Record",
+        "btn.record_stop":   "Stop",
+        "pill.idle":         "Idle",
+        "pill.starting":     "Connecting...",
+        "pill.live":         "Live",
+        "pill.rec":          "REC {time}",
         "st.ready":             "Ready",
         "st.preview_active":    "Preview active",
         "st.preview_starting":  "Starting preview...",
@@ -805,7 +830,7 @@ DEFAULTS: dict = {
     "show_preview_while_recording": True,
     "audio_passthrough_during_record": True,
     "shortcut_offered": False,            # ya preguntamos por crear acceso directo
-    "theme": "light",                     # light | dark
+    "theme": "dark",                      # light | dark
     "muted": False,
     "language": "es",                     # ISO 639-1: es | en | ...
     "sidebar_side": "right",              # right | left
@@ -2102,39 +2127,50 @@ def run_gui(cfg: dict) -> None:
     import tkinter as tk
     from tkinter import ttk, messagebox, filedialog
 
-    # ----- Paletas modernas (Tailwind / slate + accent) -----
+    # ----- Paletas -----
+    # Superficies neutras (grafito) + un unico acento violeta. El area de
+    # video es siempre oscura (VIDEO_*) en ambos temas: es una ventana de
+    # juego, un marco blanco alrededor de la imagen distrae.
     LIGHT_PALETTE = {
-        "BG":          "#f8fafc", "BG_DEEP":     "#f1f5f9",
-        "CARD":        "#ffffff", "BORDER":      "#e2e8f0",
-        "BORDER_HARD": "#cbd5e1", "TEXT":        "#0f172a",
-        "SUB":         "#475569", "MUTED":       "#94a3b8",
-        "ACCENT":      "#2563eb", "ACCENT_HOV":  "#1d4ed8",
-        "ACCENT_BG":   "#eff6ff",
-        "OK_BG":       "#ecfdf5", "OK_FG":       "#047857",
-        "WARN_BG":     "#fffbeb", "WARN_FG":     "#b45309",
-        "ERR_BG":      "#fef2f2", "ERR_FG":      "#b91c1c",
-        "SEL_BG":      "#2563eb", "SEL_FG":      "#ffffff",
-        "HOVER_BG":    "#f1f5f9",
-        "VIDEO_BG":    "#000000",
-        "HEADER_BG":   "#eef2f7", "HEADER_BORDER": "#cbd5e1",
+        "BG":          "#f6f7f9", "BG_DEEP":     "#eceef2",
+        "CARD":        "#ffffff", "BORDER":      "#e2e5eb",
+        "BORDER_HARD": "#cdd2db", "TEXT":        "#14161b",
+        "SUB":         "#5b6270", "MUTED":       "#9aa1ad",
+        "ACCENT":      "#5b4cf0", "ACCENT_HOV":  "#4a3bd9",
+        "ACCENT_BG":   "#eeecfe", "ACCENT_FG":   "#ffffff",
+        "OK_BG":       "#e9f9ef", "OK_FG":       "#15803d",
+        "WARN_BG":     "#fff7e6", "WARN_FG":     "#b45309",
+        "ERR_BG":      "#fdeeee", "ERR_FG":      "#dc2626",
+        "REC":         "#e5484d", "REC_HOV":     "#cf3a3f",
+        "SEL_BG":      "#5b4cf0", "SEL_FG":      "#ffffff",
+        "HOVER_BG":    "#eef0f4",
+        "VIDEO_BG":    "#0b0c0f", "VIDEO_FG":    "#e8eaef",
+        "VIDEO_SUB":   "#7d8492",
+        "HEADER_BG":   "#f6f7f9", "HEADER_BORDER": "#e2e5eb",
+        "TIP_BG":      "#14161b", "TIP_FG":      "#f3f4f6",
+        "TIP_BORDER":  "#14161b",
     }
     DARK_PALETTE = {
-        "BG":          "#0f172a", "BG_DEEP":     "#020617",
-        "CARD":        "#1e293b", "BORDER":      "#334155",
-        "BORDER_HARD": "#475569", "TEXT":        "#f1f5f9",
-        "SUB":         "#94a3b8", "MUTED":       "#64748b",
-        "ACCENT":      "#3b82f6", "ACCENT_HOV":  "#60a5fa",
-        "ACCENT_BG":   "#1e3a8a",
-        "OK_BG":       "#064e3b", "OK_FG":       "#6ee7b7",
-        "WARN_BG":     "#78350f", "WARN_FG":     "#fcd34d",
-        "ERR_BG":      "#7f1d1d", "ERR_FG":      "#fca5a5",
-        "SEL_BG":      "#3b82f6", "SEL_FG":      "#ffffff",
-        "HOVER_BG":    "#334155",
-        "VIDEO_BG":    "#000000",
-        "HEADER_BG":   "#1e293b", "HEADER_BORDER": "#334155",
+        "BG":          "#111318", "BG_DEEP":     "#0b0c0f",
+        "CARD":        "#1a1d24", "BORDER":      "#262a33",
+        "BORDER_HARD": "#363b47", "TEXT":        "#e8eaef",
+        "SUB":         "#9aa1ae", "MUTED":       "#646b78",
+        "ACCENT":      "#7c6cff", "ACCENT_HOV":  "#9486ff",
+        "ACCENT_BG":   "#24204a", "ACCENT_FG":   "#ffffff",
+        "OK_BG":       "#10291d", "OK_FG":       "#4ade80",
+        "WARN_BG":     "#2e2410", "WARN_FG":     "#fbbf24",
+        "ERR_BG":      "#301518", "ERR_FG":      "#f87171",
+        "REC":         "#e5484d", "REC_HOV":     "#f2555a",
+        "SEL_BG":      "#7c6cff", "SEL_FG":      "#ffffff",
+        "HOVER_BG":    "#22262e",
+        "VIDEO_BG":    "#0b0c0f", "VIDEO_FG":    "#e8eaef",
+        "VIDEO_SUB":   "#7d8492",
+        "HEADER_BG":   "#111318", "HEADER_BORDER": "#262a33",
+        "TIP_BG":      "#22262e", "TIP_FG":      "#e8eaef",
+        "TIP_BORDER":  "#363b47",
     }
-    THEME_NAME = (cfg.get("theme") or "light").lower()
-    if THEME_NAME not in ("light", "dark"): THEME_NAME = "light"
+    THEME_NAME = (cfg.get("theme") or "dark").lower()
+    if THEME_NAME not in ("light", "dark"): THEME_NAME = "dark"
     P = DARK_PALETTE if THEME_NAME == "dark" else LIGHT_PALETTE
     BG          = P["BG"]
     BG_DEEP     = P["BG_DEEP"]
@@ -2147,6 +2183,7 @@ def run_gui(cfg: dict) -> None:
     ACCENT      = P["ACCENT"]
     ACCENT_HOV  = P["ACCENT_HOV"]
     ACCENT_BG   = P["ACCENT_BG"]
+    ACCENT_FG   = P["ACCENT_FG"]
     OK_BG       = P["OK_BG"]
     OK_FG       = P["OK_FG"]
     WARN_BG     = P["WARN_BG"]
@@ -2161,21 +2198,61 @@ def run_gui(cfg: dict) -> None:
 
     # Tipografia (Segoe UI Variable Display cae a Segoe UI en Win10)
     FONT_TITLE   = ("Segoe UI Variable Display", 18, "bold")
+    FONT_BRAND   = ("Segoe UI Variable Display", 13, "bold")
     FONT_SECTION = ("Segoe UI Variable", 10, "bold")
     FONT_BODY    = ("Segoe UI Variable", 10)
+    FONT_BTN     = ("Segoe UI Variable", 10, "bold")
+    FONT_HERO    = ("Segoe UI Variable", 11, "bold")
     FONT_SUB     = ("Segoe UI Variable", 9)
+    FONT_PILL    = ("Segoe UI Variable", 9, "bold")
     FONT_TINY    = ("Segoe UI Variable", 8)
     FONT_MONO    = ("Cascadia Mono", 9)
     FONT_EMOJI   = ("Segoe UI Emoji", 16)
+    FONT_PH_GLYPH = ("Segoe UI Symbol", 34)
+    FONT_PH_TITLE = ("Segoe UI Variable Display", 15, "bold")
+
+    # Iconos de toolbar: Segoe Fluent Icons (Win11) / MDL2 Assets (Win10)
+    # dan glifos monocromos nativos de Windows. Si ninguna esta instalada
+    # (otro SO, Windows recortado) caemos a simbolos Unicode comunes.
+    # Se resuelven en App.__init__ (necesitan un root Tk para listar fuentes).
+    FONT_ICON = ("Segoe UI Symbol", 11)
+    ICONS: dict[str, str] = {}
+
+    def _init_icons(root) -> None:
+        nonlocal FONT_ICON
+        from tkinter import font as tkfont
+        try: families = set(tkfont.families(root))
+        except Exception: families = set()
+        name = next((f for f in ("Segoe Fluent Icons", "Segoe MDL2 Assets")
+                     if f in families), None)
+        if name:
+            FONT_ICON = (name, 10)
+            ICONS.update({
+                "min": "\uE921", "max": "\uE922", "restore": "\uE923",
+                "close": "\uE8BB", "full": "\uE740", "unfull": "\uE73F",
+                "vol": "\uE767", "mute": "\uE74F",
+                "focus": "\uE89F", "unfocus": "\uE8A0",
+                "side": "\uE8AB", "lang": "\uE774",
+                "moon": "\uE708", "sun": "\uE706",
+            })
+        else:
+            FONT_ICON = ("Segoe UI Symbol", 11)
+            ICONS.update({
+                "min": "\u2013", "max": "\u25a1", "restore": "\u2750",
+                "close": "\u2715", "full": "\u26f6", "unfull": "\u26f6",
+                "vol": "\U0001f50a", "mute": "\U0001f507",
+                "focus": "\u2922", "unfocus": "\u29c9",
+                "side": "\u21c6", "lang": "\U0001f310",
+                "moon": "\u263e", "sun": "\u2600",
+            })
 
     def _sev_colors() -> dict[str, tuple[str, str]]:
         return {
             "error": (ERR_BG, ERR_FG),
             "warn":  (WARN_BG, WARN_FG),
             "ok":    (OK_BG, OK_FG),
-            "info":  (CARD, SUB),
+            "info":  (CARD, MUTED),
         }
-    SEV_GLYPH = {"error": "●", "warn": "●", "ok": "●", "info": "●"}
 
     class ToolTip:
         """Tooltip on hover para cualquier widget.
@@ -2236,9 +2313,10 @@ def run_gui(cfg: dict) -> None:
             except Exception: pass
             tk.Label(
                 tw, text=text, justify="left",
-                bg="#202020", fg="#f5f5f5",
-                relief="solid", borderwidth=1,
-                font=("Segoe UI", 9), padx=8, pady=5,
+                bg=P["TIP_BG"], fg=P["TIP_FG"],
+                highlightthickness=1,
+                highlightbackground=P["TIP_BORDER"],
+                borderwidth=0, font=FONT_SUB, padx=10, pady=7,
                 wraplength=self.wrap,
             ).pack()
             self.tipwin = tw
@@ -2250,11 +2328,17 @@ def run_gui(cfg: dict) -> None:
                 self.tipwin = None
 
     class CollapsiblePanel:
-        """Seccion de menu colapsable + reordenable. Look moderno (sin barras grises).
+        """Seccion de menu colapsable + reordenable.
 
-        Header limpio con border-bottom + accent text + arrows on hover.
+        Estilo "lista de ajustes": divisor fino arriba, titulo en sentence
+        case, chevron a la izquierda. Las flechas de reordenar solo se ven
+        con el cursor sobre el header, asi no compiten con el contenido.
         Si reorderable=False, no muestra los botones de mover orden.
         """
+        # Argumentos de pack compartidos por _make_section / _move_panel /
+        # _apply_persisted_layout (un solo lugar para el espaciado).
+        PACK_KW = {"fill": "x", "padx": 0, "pady": 0}
+
         def __init__(self, parent, title: str, app, *, reorderable: bool = True,
                        on_toggle=None):
             self.app = app
@@ -2262,57 +2346,95 @@ def run_gui(cfg: dict) -> None:
             self.expanded = True
             self.section_key: str | None = None
             self.on_toggle = on_toggle
+            self._hover = False
 
             hbg = P["HEADER_BG"]; hbd = P["HEADER_BORDER"]
             self.outer = tk.Frame(parent, bg=P["BG"], highlightthickness=0)
 
-            # Header tipo "card top" con borde inferior sutil
             self.hdr_outer = tk.Frame(self.outer, bg=hbg,
                                        highlightthickness=0)
             self.hdr_outer.pack(fill="x")
-            self.hdr = tk.Frame(self.hdr_outer, bg=hbg, padx=4, pady=2)
-            self.hdr.pack(fill="x")
             self.sep = tk.Frame(self.hdr_outer, bg=hbd, height=1)
-            self.sep.pack(fill="x")
+            self.sep.pack(fill="x", padx=14)
+            self.hdr = tk.Frame(self.hdr_outer, bg=hbg, padx=8, pady=4)
+            self.hdr.pack(fill="x")
 
             def _click_toggle(_e):
                 self.toggle()
                 return "break"   # impide que el bind_all drag se dispare
 
             self.toggle_lbl = tk.Label(
-                self.hdr, text="▼", bg=hbg, fg=P["SUB"],
-                font=FONT_BODY, cursor="hand2",
-                padx=6, pady=4)
+                self.hdr, text="▾", bg=hbg, fg=P["MUTED"],
+                font=FONT_BODY, cursor="hand2", width=2,
+                padx=2, pady=4)
             self.toggle_lbl.pack(side="left")
             self.toggle_lbl.bind("<Button-1>", _click_toggle)
 
             self.title_lbl = tk.Label(
-                self.hdr, text=title.upper(), bg=hbg, fg=P["ACCENT"],
+                self.hdr, text=title, bg=hbg, fg=P["TEXT"],
                 font=FONT_SECTION, cursor="hand2", anchor="w")
-            self.title_lbl.pack(side="left", fill="x", expand=True, padx=4)
+            self.title_lbl.pack(side="left", fill="x", expand=True, padx=2)
             self.title_lbl.bind("<Button-1>", _click_toggle)
 
             self.arrow_labels: list[tk.Label] = []
             if reorderable:
                 for arrow, dir_ in (("↓", 1), ("↑", -1)):
                     lab = tk.Label(
-                        self.hdr, text=arrow, bg=hbg, fg=P["MUTED"],
+                        self.hdr, text=arrow, bg=hbg, fg=hbg,
                         font=FONT_BODY, cursor="hand2",
-                        padx=8, pady=4)
+                        padx=6, pady=4)
                     lab.pack(side="right")
                     def _click_move(_e, d=dir_):
                         self.app._move_panel(self, d)
                         return "break"
                     lab.bind("<Button-1>", _click_move)
                     lab.bind("<Enter>",
-                              lambda e, l=lab: l.configure(fg=P["ACCENT"]))
+                              lambda e, l=lab: l.configure(fg=P["ACCENT"]),
+                              add="+")
                     lab.bind("<Leave>",
-                              lambda e, l=lab: l.configure(fg=P["MUTED"]))
+                              lambda e, l=lab: l.configure(
+                                  fg=P["MUTED"] if self._hover
+                                  else P["HEADER_BG"]),
+                              add="+")
                     self.arrow_labels.append(lab)
 
+            # Hover del header: revela flechas + tinte sutil del titulo.
+            for w in (self.hdr, self.toggle_lbl, self.title_lbl,
+                       *self.arrow_labels):
+                w.bind("<Enter>", self._on_hdr_enter, add="+")
+                w.bind("<Leave>", self._on_hdr_leave, add="+")
+
             # Body
-            self.body = ttk.Frame(self.outer, padding=(12, 10, 12, 12))
+            self.body = ttk.Frame(self.outer, padding=(14, 0, 14, 12))
             self.body.pack(fill="x")
+
+        def _on_hdr_enter(self, _e=None) -> None:
+            if self._hover: return
+            self._hover = True
+            self._paint_hover()
+
+        def _on_hdr_leave(self, _e=None) -> None:
+            # Leave tambien se dispara al pasar de un hijo a otro dentro del
+            # header; solo apagamos si el puntero realmente salio.
+            try:
+                x, y = self.hdr.winfo_pointerxy()
+                w = self.hdr.winfo_containing(x, y)
+            except Exception:
+                w = None
+            while w is not None:
+                if w is self.hdr: return
+                w = getattr(w, "master", None)
+            self._hover = False
+            self._paint_hover()
+
+        def _paint_hover(self) -> None:
+            try:
+                self.toggle_lbl.configure(
+                    fg=P["ACCENT"] if self._hover else P["MUTED"])
+                for lab in self.arrow_labels:
+                    lab.configure(fg=P["MUTED"] if self._hover
+                                  else P["HEADER_BG"])
+            except Exception: pass
 
         def apply_palette(self) -> None:
             """Re-aplica los colores actuales de la paleta a los widgets tk.
@@ -2323,22 +2445,23 @@ def run_gui(cfg: dict) -> None:
             self.hdr_outer.configure(bg=hbg)
             self.hdr.configure(bg=hbg)
             self.sep.configure(bg=hbd)
-            self.toggle_lbl.configure(bg=hbg, fg=P["SUB"])
-            self.title_lbl.configure(bg=hbg, fg=P["ACCENT"])
+            self.toggle_lbl.configure(bg=hbg)
+            self.title_lbl.configure(bg=hbg, fg=P["TEXT"])
             for lab in self.arrow_labels:
-                lab.configure(bg=hbg, fg=P["MUTED"])
+                lab.configure(bg=hbg)
+            self._paint_hover()
 
         def set_title(self, title: str) -> None:
-            try: self.title_lbl.configure(text=title.upper())
+            try: self.title_lbl.configure(text=title)
             except Exception: pass
 
         def toggle(self) -> None:
             if self.expanded:
                 self.body.pack_forget()
-                self.toggle_lbl.configure(text="▶")
+                self.toggle_lbl.configure(text="▸")
             else:
                 self.body.pack(fill="x")
-                self.toggle_lbl.configure(text="▼")
+                self.toggle_lbl.configure(text="▾")
             self.expanded = not self.expanded
             if self.on_toggle:
                 try: self.on_toggle(self.expanded)
@@ -2349,11 +2472,11 @@ def run_gui(cfg: dict) -> None:
             restauracion al inicio)."""
             if collapsed and self.expanded:
                 self.body.pack_forget()
-                self.toggle_lbl.configure(text="▶")
+                self.toggle_lbl.configure(text="▸")
                 self.expanded = False
             elif not collapsed and not self.expanded:
                 self.body.pack(fill="x")
-                self.toggle_lbl.configure(text="▼")
+                self.toggle_lbl.configure(text="▾")
                 self.expanded = True
 
         def pack(self, **kw):
@@ -2370,6 +2493,7 @@ def run_gui(cfg: dict) -> None:
             # primero la chrome nativa del SO y luego la quite (eso es el
             # flash que ve el user). La revelamos despues del build.
             self.withdraw()
+            _init_icons(self)
 
             self.cfg = cfg
             self.master_session: dict | None = None
@@ -2492,11 +2616,16 @@ def run_gui(cfg: dict) -> None:
             # Defaults
             s.configure(".", background=BG, foreground=TEXT, font=FONT_BODY,
                         bordercolor=BORDER, lightcolor=BG, darkcolor=BG,
-                        focuscolor=ACCENT)
+                        troughcolor=BORDER, focuscolor=BG,
+                        selectbackground=ACCENT, selectforeground=ACCENT_FG)
             s.configure("TFrame", background=BG)
             s.configure("TLabel", background=BG, foreground=TEXT, font=FONT_BODY)
             s.configure("Title.TLabel", background=BG, foreground=TEXT,
                         font=FONT_TITLE)
+            s.configure("Brand.TLabel", background=BG, foreground=TEXT,
+                        font=FONT_BRAND)
+            s.configure("BrandSub.TLabel", background=BG, foreground=MUTED,
+                        font=FONT_SUB)
             s.configure("Section.TLabel", background=BG, foreground=ACCENT,
                         font=FONT_SECTION)
             s.configure("Sub.TLabel", background=BG, foreground=SUB,
@@ -2504,7 +2633,23 @@ def run_gui(cfg: dict) -> None:
             s.configure("Mono.TLabel", background=BG, foreground=SUB,
                         font=FONT_MONO)
             s.configure("Rec.TLabel", background=BG, foreground=ERR_FG,
-                        font=("Segoe UI", 10, "bold"))
+                        font=FONT_BTN)
+
+            # Tarjeta "hero" del header (estado + acciones primarias)
+            s.configure("Card.TFrame", background=CARD, bordercolor=BORDER,
+                        lightcolor=CARD, darkcolor=CARD,
+                        relief="solid", borderwidth=1)
+            s.configure("Card.TLabel", background=CARD, foreground=TEXT,
+                        font=FONT_BODY)
+            s.configure("CardSub.TLabel", background=CARD, foreground=SUB,
+                        font=FONT_SUB)
+            # Pastilla de estado: una variante por estado de la sesion.
+            for name, bg, fg in (("Idle", HOVER_BG, SUB),
+                                  ("Wait", WARN_BG, WARN_FG),
+                                  ("Live", OK_BG, OK_FG),
+                                  ("Rec", ERR_BG, ERR_FG)):
+                s.configure(f"Pill{name}.TLabel", background=bg,
+                            foreground=fg, font=FONT_PILL, padding=(9, 3))
 
             # LabelFrame (lo usa el panel "Acciones")
             s.configure("TLabelframe", background=BG, borderwidth=0,
@@ -2512,57 +2657,99 @@ def run_gui(cfg: dict) -> None:
             s.configure("TLabelframe.Label", background=BG, foreground=SUB,
                         font=FONT_SECTION)
 
-            # Botones: estilo moderno flat con hover sutil
+            # Botones: flat, borde de 1px que se acentua al hover
             s.configure("TButton", padding=(12, 7), font=FONT_BODY,
                         background=CARD, foreground=TEXT,
-                        bordercolor=BORDER, focusthickness=2,
-                        relief="flat", borderwidth=1)
+                        bordercolor=BORDER, lightcolor=CARD, darkcolor=CARD,
+                        focusthickness=0, relief="solid", borderwidth=1)
             s.map("TButton",
-                   background=[("active", HOVER_BG), ("pressed", BORDER)],
-                   bordercolor=[("active", BORDER_HARD)])
+                   background=[("disabled", CARD), ("pressed", BORDER),
+                               ("active", HOVER_BG)],
+                   foreground=[("disabled", MUTED)],
+                   bordercolor=[("active", BORDER_HARD)],
+                   lightcolor=[("active", HOVER_BG)],
+                   darkcolor=[("active", HOVER_BG)])
 
-            s.configure("Primary.TButton", padding=(14, 8), font=FONT_SECTION,
-                        background=ACCENT, foreground="#ffffff",
-                        bordercolor=ACCENT, relief="flat", borderwidth=0)
+            s.configure("Primary.TButton", padding=(14, 8), font=FONT_BTN,
+                        background=ACCENT, foreground=ACCENT_FG,
+                        bordercolor=ACCENT, lightcolor=ACCENT,
+                        darkcolor=ACCENT, relief="flat", borderwidth=0)
             s.map("Primary.TButton",
-                   background=[("active", ACCENT_HOV), ("pressed", ACCENT_HOV)],
-                   foreground=[("active", "#ffffff")])
+                   background=[("pressed", ACCENT_HOV), ("active", ACCENT_HOV)],
+                   bordercolor=[("active", ACCENT_HOV)],
+                   lightcolor=[("active", ACCENT_HOV)],
+                   darkcolor=[("active", ACCENT_HOV)],
+                   foreground=[("active", ACCENT_FG)])
 
-            # Action.TButton: mismas dimensiones que Icon.TButton para que
-            # el top-bar luzca uniforme; cambia solo el accent en el border.
-            s.configure("Action.TButton", padding=(8, 6),
-                        font=("Segoe UI Emoji", 12),
-                        background=ACCENT_BG, foreground=ACCENT,
-                        bordercolor=ACCENT, relief="flat", borderwidth=1)
-            s.map("Action.TButton",
-                   background=[("active", HOVER_BG), ("pressed", BORDER)],
-                   bordercolor=[("active", ACCENT_HOV)])
+            # Boton principal grande (Iniciar / Detener vista previa)
+            s.configure("Hero.TButton", padding=(14, 11), font=FONT_HERO,
+                        background=ACCENT, foreground=ACCENT_FG,
+                        bordercolor=ACCENT, lightcolor=ACCENT,
+                        darkcolor=ACCENT, relief="flat", borderwidth=0)
+            s.map("Hero.TButton",
+                   background=[("pressed", ACCENT_HOV), ("active", ACCENT_HOV)],
+                   bordercolor=[("active", ACCENT_HOV)],
+                   lightcolor=[("active", ACCENT_HOV)],
+                   darkcolor=[("active", ACCENT_HOV)],
+                   foreground=[("active", ACCENT_FG)])
+            # Variante "detener": neutra, para que el boton rojo sea solo REC
+            s.configure("HeroStop.TButton", padding=(14, 11), font=FONT_HERO,
+                        background=HOVER_BG, foreground=TEXT,
+                        bordercolor=BORDER_HARD, lightcolor=HOVER_BG,
+                        darkcolor=HOVER_BG, relief="flat", borderwidth=1)
+            s.map("HeroStop.TButton",
+                   background=[("pressed", BORDER), ("active", BORDER)],
+                   lightcolor=[("active", BORDER)],
+                   darkcolor=[("active", BORDER)])
 
-            s.configure("ActionRec.TButton", padding=(8, 6),
-                        font=("Segoe UI Emoji", 12),
-                        background=ERR_BG, foreground=ERR_FG,
-                        bordercolor=ERR_FG, relief="flat", borderwidth=1)
-            s.map("ActionRec.TButton",
-                   background=[("active", ERR_BG), ("pressed", ERR_BG)])
-
-            # Close button: rojo armonico con el tema
-            s.configure("Close.TButton", padding=(8, 6),
-                        font=("Segoe UI Emoji", 12),
-                        background=CARD, foreground=ERR_FG,
-                        bordercolor=BORDER, relief="flat", borderwidth=1)
-            s.map("Close.TButton",
-                   background=[("active", ERR_BG), ("pressed", ERR_BG)],
-                   foreground=[("active", ERR_FG)],
-                   bordercolor=[("active", ERR_FG)])
-
-            # Botones de iconos uniformes (toolbar buttons)
-            s.configure("Icon.TButton", padding=(8, 6),
-                        font=("Segoe UI Emoji", 12),
+            # Acciones secundarias de la tarjeta (Captura / Grabar)
+            s.configure("Action.TButton", padding=(10, 8), font=FONT_BTN,
                         background=CARD, foreground=TEXT,
-                        bordercolor=BORDER, relief="flat", borderwidth=1)
-            s.map("Icon.TButton",
-                   background=[("active", HOVER_BG), ("pressed", BORDER)],
-                   bordercolor=[("active", ACCENT)])
+                        bordercolor=BORDER_HARD, lightcolor=CARD,
+                        darkcolor=CARD, relief="solid", borderwidth=1)
+            s.map("Action.TButton",
+                   background=[("disabled", CARD), ("pressed", BORDER),
+                               ("active", HOVER_BG)],
+                   foreground=[("disabled", MUTED)],
+                   bordercolor=[("disabled", BORDER_HARD), ("active", ACCENT)],
+                   lightcolor=[("active", HOVER_BG)],
+                   darkcolor=[("active", HOVER_BG)])
+
+            s.configure("ActionRec.TButton", padding=(10, 8), font=FONT_BTN,
+                        background=P["REC"], foreground="#ffffff",
+                        bordercolor=P["REC"], lightcolor=P["REC"],
+                        darkcolor=P["REC"], relief="flat", borderwidth=1)
+            s.map("ActionRec.TButton",
+                   background=[("pressed", P["REC_HOV"]),
+                               ("active", P["REC_HOV"])],
+                   bordercolor=[("active", P["REC_HOV"])],
+                   lightcolor=[("active", P["REC_HOV"])],
+                   darkcolor=[("active", P["REC_HOV"])],
+                   foreground=[("disabled", "#ffffff")])
+
+            # Iconos de toolbar / ventana: sin borde, solo tinte al hover
+            for name, hover_bg, hover_fg in (
+                    ("Icon", HOVER_BG, TEXT),
+                    ("Win", HOVER_BG, TEXT),
+                    ("Close", P["REC"], "#ffffff")):
+                s.configure(f"{name}.TButton", padding=(8, 5),
+                            font=FONT_ICON, background=BG, foreground=SUB,
+                            bordercolor=BG, lightcolor=BG, darkcolor=BG,
+                            relief="flat", borderwidth=0)
+                s.map(f"{name}.TButton",
+                       background=[("pressed", BORDER), ("active", hover_bg)],
+                       foreground=[("active", hover_fg)],
+                       bordercolor=[("active", hover_bg)],
+                       lightcolor=[("active", hover_bg)],
+                       darkcolor=[("active", hover_bg)])
+            # Toggle encendido (ej. mute activo): icono en acento
+            s.configure("IconOn.TButton", padding=(8, 5), font=FONT_ICON,
+                        background=ACCENT_BG, foreground=ACCENT,
+                        bordercolor=ACCENT_BG, lightcolor=ACCENT_BG,
+                        darkcolor=ACCENT_BG, relief="flat", borderwidth=0)
+            s.map("IconOn.TButton",
+                   background=[("active", ACCENT_BG)],
+                   foreground=[("active", ACCENT_HOV)])
 
             s.configure("Ghost.TButton", padding=(10, 6), font=FONT_BODY,
                         background=BG, foreground=SUB,
@@ -2575,42 +2762,72 @@ def run_gui(cfg: dict) -> None:
             s.configure("TCombobox", padding=(8, 5), font=FONT_BODY,
                         fieldbackground=CARD, background=CARD,
                         foreground=TEXT, bordercolor=BORDER,
-                        lightcolor=BORDER, darkcolor=BORDER,
-                        arrowcolor=SUB, selectbackground=ACCENT_BG,
-                        selectforeground=TEXT)
+                        lightcolor=CARD, darkcolor=CARD,
+                        arrowcolor=SUB, arrowsize=12,
+                        selectbackground=CARD, selectforeground=TEXT)
             s.map("TCombobox",
                    bordercolor=[("focus", ACCENT), ("active", BORDER_HARD)],
-                   fieldbackground=[("readonly", CARD)])
+                   background=[("active", HOVER_BG)],
+                   arrowcolor=[("active", TEXT)],
+                   fieldbackground=[("readonly", CARD)],
+                   foreground=[("readonly", TEXT)],
+                   selectbackground=[("readonly", CARD)],
+                   selectforeground=[("readonly", TEXT)])
+            # Lista desplegable del combobox (es un tk.Listbox interno)
+            self.option_add("*TCombobox*Listbox.background", CARD)
+            self.option_add("*TCombobox*Listbox.foreground", TEXT)
+            self.option_add("*TCombobox*Listbox.selectBackground", ACCENT)
+            self.option_add("*TCombobox*Listbox.selectForeground", ACCENT_FG)
+            self.option_add("*TCombobox*Listbox.font", FONT_BODY)
+            self.option_add("*TCombobox*Listbox.borderWidth", 0)
             s.configure("TEntry", padding=(8, 5), font=FONT_BODY,
                         fieldbackground=CARD, foreground=TEXT,
-                        bordercolor=BORDER, lightcolor=BORDER,
-                        darkcolor=BORDER, insertcolor=TEXT)
+                        bordercolor=BORDER, lightcolor=CARD,
+                        darkcolor=CARD, insertcolor=TEXT)
             s.map("TEntry",
                    bordercolor=[("focus", ACCENT), ("active", BORDER_HARD)])
 
-            # Check
+            # Check: casilla plana, rellena con el acento al marcar
             s.configure("TCheckbutton", background=BG, foreground=TEXT,
-                        font=FONT_BODY, focuscolor=ACCENT,
+                        font=FONT_BODY, focuscolor=BG,
                         indicatorbackground=CARD,
-                        indicatorforeground=ACCENT)
+                        indicatorforeground=ACCENT_FG,
+                        indicatorsize=14, indicatormargin=(0, 0, 8, 0),
+                        upperbordercolor=BORDER_HARD,
+                        lowerbordercolor=BORDER_HARD)
             s.map("TCheckbutton",
-                   indicatorbackground=[("active", HOVER_BG)],
+                   background=[("active", BG)],
+                   indicatorbackground=[("selected", ACCENT),
+                                        ("active", HOVER_BG)],
+                   upperbordercolor=[("selected", ACCENT)],
+                   lowerbordercolor=[("selected", ACCENT)],
                    foreground=[("active", TEXT)])
 
             # Scale (slider de volumen)
-            s.configure("Horizontal.TScale", background=BG,
-                        troughcolor=BORDER, bordercolor=BORDER,
-                        sliderthickness=16,
-                        sliderrelief="flat",
-                        slidercolor=ACCENT, lightcolor=ACCENT, darkcolor=ACCENT)
+            s.configure("Horizontal.TScale", background=ACCENT,
+                        troughcolor=BORDER, bordercolor=BG,
+                        lightcolor=ACCENT, darkcolor=ACCENT,
+                        sliderthickness=14, sliderlength=14,
+                        sliderrelief="flat", gripcount=0, borderwidth=0)
+            s.map("Horizontal.TScale",
+                   background=[("active", ACCENT_HOV)],
+                   lightcolor=[("active", ACCENT_HOV)],
+                   darkcolor=[("active", ACCENT_HOV)])
 
-            # Scrollbar
-            s.configure("Vertical.TScrollbar", background=BG_DEEP,
+            # Scrollbar fina sin flechas
+            s.layout("Vertical.TScrollbar", [
+                ("Vertical.Scrollbar.trough", {"sticky": "ns", "children": [
+                    ("Vertical.Scrollbar.thumb",
+                     {"expand": "1", "sticky": "nswe"})]})])
+            s.configure("Vertical.TScrollbar", background=BORDER,
                         troughcolor=BG, bordercolor=BG,
-                        arrowcolor=SUB, relief="flat",
+                        lightcolor=BORDER, darkcolor=BORDER,
+                        arrowsize=8, relief="flat",
                         gripcount=0, borderwidth=0)
             s.map("Vertical.TScrollbar",
-                   background=[("active", BORDER_HARD)])
+                   background=[("active", BORDER_HARD)],
+                   lightcolor=[("active", BORDER_HARD)],
+                   darkcolor=[("active", BORDER_HARD)])
 
             # Separator
             s.configure("TSeparator", background=BORDER)
@@ -2711,13 +2928,13 @@ def run_gui(cfg: dict) -> None:
                 if self._saved_geometry:
                     self.geometry(self._saved_geometry)
                 self._maximized = False
-                self.btn_max.configure(text="🗖")
+                self.btn_max.configure(text=ICONS["max"])
             else:
                 self._saved_geometry = self.geometry()
                 x, y, w, h = self._get_work_area()
                 self.geometry(f"{w}x{h}+{x}+{y}")
                 self._maximized = True
-                self.btn_max.configure(text="🗗")
+                self.btn_max.configure(text=ICONS["restore"])
             self._schedule_resync()
 
         def _toggle_fullscreen(self) -> None:
@@ -2725,7 +2942,7 @@ def run_gui(cfg: dict) -> None:
                 if self._saved_geometry:
                     self.geometry(self._saved_geometry)
                 self._fullscreen = False
-                self.btn_full.configure(text="⛶")
+                self.btn_full.configure(text=ICONS["full"])
             else:
                 if not self._maximized:
                     self._saved_geometry = self.geometry()
@@ -2733,7 +2950,7 @@ def run_gui(cfg: dict) -> None:
                 sh = self.winfo_screenheight()
                 self.geometry(f"{sw}x{sh}+0+0")
                 self._fullscreen = True
-                self.btn_full.configure(text="⛶")
+                self.btn_full.configure(text=ICONS["unfull"])
             self._schedule_resync()
 
         # Clases de widgets desde las que NO arrastramos la ventana.
@@ -2857,7 +3074,9 @@ def run_gui(cfg: dict) -> None:
         def _update_mute_button(self) -> None:
             if hasattr(self, "btn_mute"):
                 muted = bool(self.cfg.get("muted", False))
-                self.btn_mute.configure(text="🔇" if muted else "🔊")
+                self.btn_mute.configure(
+                    text=ICONS["mute"] if muted else ICONS["vol"],
+                    style="IconOn.TButton" if muted else "Icon.TButton")
 
         # ---------- Popup mode (focus: oculta chrome) ----------
         def _toggle_popup(self) -> None:
@@ -2938,7 +3157,7 @@ def run_gui(cfg: dict) -> None:
             self._popup_mode = True
             self._popup_saved_sidebar = self.sidebar_visible
             if hasattr(self, "btn_popup"):
-                self.btn_popup.configure(text="⧈")
+                self.btn_popup.configure(text=ICONS["unfocus"])
             self._set_status("Modo focus · doble-click en el video o Esc para volver")
 
             def _hide():
@@ -2956,7 +3175,7 @@ def run_gui(cfg: dict) -> None:
             self._popup_mode = False
             self.sidebar_visible = self._popup_saved_sidebar
             if hasattr(self, "btn_popup"):
-                self.btn_popup.configure(text="⧉")
+                self.btn_popup.configure(text=ICONS["focus"])
             self._set_status("Listo")
             if not self.sidebar_visible:
                 # El user habia escondido la sidebar antes; nada que animar
@@ -2975,8 +3194,12 @@ def run_gui(cfg: dict) -> None:
             return "break"
 
         # Tamano fijo del overlay (los valores adentro cambian, el bloque no)
-        VOL_OVERLAY_W = 420
-        VOL_OVERLAY_H = 60
+        VOL_OVERLAY_W = 340
+        VOL_OVERLAY_H = 52
+        # Overlays sobre el video (toast / volumen): siempre oscuros, porque
+        # se ven encima de la imagen del juego sin importar el tema.
+        OVERLAY_BG = "#16181d"
+        OVERLAY_BORDER = "#2c313b"
 
         # ---------- Toast genérico (captura, grabar, etc.) ----------
         def _show_toast(self, text: str, kind: str = "info",
@@ -2990,26 +3213,30 @@ def run_gui(cfg: dict) -> None:
                 ov.overrideredirect(True)
                 try: ov.attributes("-topmost", True)
                 except Exception: pass
-                try: ov.attributes("-alpha", 0.92)
+                try: ov.attributes("-alpha", 0.95)
                 except Exception: pass
-                ov.configure(bg="#000000")
+                ov.configure(bg=self.OVERLAY_BG, highlightthickness=1,
+                             highlightbackground=self.OVERLAY_BORDER)
                 self._toast_ov = ov
+                # Franja de color a la izquierda = tipo de aviso
+                self._toast_bar = tk.Frame(ov, width=4, bg="#ffffff")
+                self._toast_bar.pack(side="left", fill="y")
                 self._toast_lbl = tk.Label(
-                    ov, font=("Segoe UI", 12, "bold"),
-                    fg="#ffffff", bg="#000000",
-                    padx=20, pady=10, anchor="center")
-                self._toast_lbl.pack(fill="both", expand=True)
+                    ov, font=FONT_BTN,
+                    fg="#ffffff", bg=self.OVERLAY_BG,
+                    padx=16, pady=10, anchor="w")
+                self._toast_lbl.pack(side="left", fill="both", expand=True)
 
             ov = self._toast_ov
             colors = {
-                "info":    "#ffffff",
-                "success": "#86efac",   # emerald-300
-                "warning": "#fcd34d",   # amber-300
-                "error":   "#fca5a5",   # red-300
-                "rec":     "#fca5a5",   # red para grabacion
+                "info":    "#a5b4fc",   # indigo-300
+                "success": "#4ade80",   # green-400
+                "warning": "#fbbf24",   # amber-400
+                "error":   "#f87171",   # red-400
+                "rec":     "#e5484d",   # rojo de grabacion
             }
-            self._toast_lbl.configure(
-                text=text, fg=colors.get(kind, "#ffffff"))
+            self._toast_bar.configure(bg=colors.get(kind, "#ffffff"))
+            self._toast_lbl.configure(text=text, fg="#f3f4f6")
 
             # Posicion: centrado en la parte superior del video
             ov.update_idletasks()
@@ -3042,33 +3269,50 @@ def run_gui(cfg: dict) -> None:
 
         def _show_volume_overlay(self, volume: int, muted: bool = False) -> None:
             """Muestra una barra de volumen flotante sobre el video por 1.2s."""
+            W, H = self.VOL_OVERLAY_W, self.VOL_OVERLAY_H
             if not hasattr(self, "_vol_overlay") or self._vol_overlay is None \
                     or not self._vol_overlay.winfo_exists():
                 ov = tk.Toplevel(self)
                 ov.overrideredirect(True)
                 try: ov.attributes("-topmost", True)
                 except Exception: pass
-                try: ov.attributes("-alpha", 0.92)
+                try: ov.attributes("-alpha", 0.95)
                 except Exception: pass
-                ov.configure(bg="#000000")
+                ov.configure(bg=self.OVERLAY_BG)
                 self._vol_overlay = ov
-                # Label fill: el toplevel tiene geometry fija; label se centra
-                self._vol_overlay_lbl = tk.Label(
-                    ov, font=("Consolas", 14, "bold"),
-                    fg="#ffffff", bg="#000000",
-                    anchor="center")
-                self._vol_overlay_lbl.pack(fill="both", expand=True)
+                # Canvas de tamano fijo: icono + barra redondeada + porcentaje
+                cv = tk.Canvas(ov, width=W, height=H, bg=self.OVERLAY_BG,
+                                highlightthickness=1,
+                                highlightbackground=self.OVERLAY_BORDER)
+                cv.pack(fill="both", expand=True)
+                self._vol_canvas = cv
 
             ov = self._vol_overlay
+            cv = self._vol_canvas
             is_muted = muted or bool(self.cfg.get("muted", False))
-            if is_muted:
-                self._vol_overlay_lbl.configure(
-                    text="🔇  MUTED            ", fg="#ff5050")
-            else:
-                filled = volume // 5
-                bar = "█" * filled + "·" * (20 - filled)
-                self._vol_overlay_lbl.configure(
-                    text=f"🔊  {bar}  {volume:3d}%", fg="#ffffff")
+            cv.delete("all")
+            cy = H // 2
+            cv.create_text(26, cy, text=ICONS["mute" if is_muted else "vol"],
+                            fill="#f87171" if is_muted else "#f3f4f6",
+                            font=(FONT_ICON[0], 14))
+            x0, x1, th = 54, W - 70, 6
+            def pill(xa, xb, color):
+                if xb - xa < th: xb = xa + th
+                r = th / 2
+                cv.create_oval(xa, cy - r, xa + th, cy + r,
+                                fill=color, outline="")
+                cv.create_oval(xb - th, cy - r, xb, cy + r,
+                                fill=color, outline="")
+                cv.create_rectangle(xa + r, cy - r, xb - r, cy + r,
+                                     fill=color, outline="")
+            pill(x0, x1, "#2c313b")
+            level = 0 if is_muted else max(0, min(100, int(volume)))
+            if level > 0:
+                pill(x0, x0 + (x1 - x0) * level / 100, P["ACCENT"])
+            cv.create_text(W - 22, cy, anchor="e",
+                            text="MUTE" if is_muted else f"{level}%",
+                            fill="#f87171" if is_muted else "#f3f4f6",
+                            font=FONT_BTN)
 
             try:
                 hx = self.video_holder.winfo_rootx()
@@ -3363,7 +3607,7 @@ def run_gui(cfg: dict) -> None:
             nonlocal THEME_NAME, P
             nonlocal BG, BG_DEEP, CARD, BORDER, BORDER_HARD
             nonlocal TEXT, SUB, MUTED
-            nonlocal ACCENT, ACCENT_HOV, ACCENT_BG
+            nonlocal ACCENT, ACCENT_HOV, ACCENT_BG, ACCENT_FG
             nonlocal OK_BG, OK_FG, WARN_BG, WARN_FG, ERR_BG, ERR_FG
             nonlocal SEL_BG, SEL_FG, HOVER_BG
             nonlocal HEADER_BG, HEADER_BORDER
@@ -3374,7 +3618,7 @@ def run_gui(cfg: dict) -> None:
             BORDER, BORDER_HARD = P["BORDER"], P["BORDER_HARD"]
             TEXT, SUB, MUTED = P["TEXT"], P["SUB"], P["MUTED"]
             ACCENT, ACCENT_HOV = P["ACCENT"], P["ACCENT_HOV"]
-            ACCENT_BG = P["ACCENT_BG"]
+            ACCENT_BG, ACCENT_FG = P["ACCENT_BG"], P["ACCENT_FG"]
             OK_BG, OK_FG = P["OK_BG"], P["OK_FG"]
             WARN_BG, WARN_FG = P["WARN_BG"], P["WARN_FG"]
             ERR_BG, ERR_FG = P["ERR_BG"], P["ERR_FG"]
@@ -3391,11 +3635,15 @@ def run_gui(cfg: dict) -> None:
                 self._sidebar_canvas.configure(bg=BG)
             if hasattr(self, "video_holder"):
                 self.video_holder.configure(bg=P["VIDEO_BG"])
+            # (_titlebar / _title_label son ttk.Frame: toman el estilo solos.
+            # Antes se les pasaba bg=, que ttk rechaza con TclError y cortaba
+            # el resto del cambio de tema.)
             if hasattr(self, "video_placeholder"):
-                self.video_placeholder.configure(bg=P["VIDEO_BG"], fg=MUTED)
-            if hasattr(self, "_titlebar"):
-                self._titlebar.configure(bg=BG)
-                self._title_label.configure(bg=BG, fg=TEXT)
+                self._paint_placeholder()
+            if hasattr(self, "_help_labels"):
+                for lbl in self._help_labels:
+                    try: lbl.configure(bg=P["BG"], fg=P["MUTED"])
+                    except Exception: pass
 
             # Cada panel re-colorea su header
             for panel in self._panels:
@@ -3417,10 +3665,11 @@ def run_gui(cfg: dict) -> None:
             self._render_format_matrix()
 
             if hasattr(self, "btn_theme"):
-                self.btn_theme.configure(text="🌙" if name == "light" else "☀")
+                self.btn_theme.configure(
+                    text=ICONS["moon"] if name == "light" else ICONS["sun"])
 
             self.cfg["theme"] = name
-            save_config(self.cfg)
+            self._save_cfg()
 
         def _sync_embed_size(self) -> None:
             """Debounced: coalesce multiples Configure rapidos."""
@@ -3455,7 +3704,7 @@ def run_gui(cfg: dict) -> None:
             panel = CollapsiblePanel(self._target, actual_title, self,
                                        on_toggle=cb)
             panel.section_key = key
-            panel.pack(fill="x", padx=8, pady=(0, 6))
+            panel.pack(**CollapsiblePanel.PACK_KW)
             self._panels.append(panel)
             if key:
                 if not hasattr(self, "_panel_keys"):
@@ -3490,7 +3739,7 @@ def run_gui(cfg: dict) -> None:
             if not (0 <= j < len(self._panels)): return
             self._panels[i], self._panels[j] = self._panels[j], self._panels[i]
             for p in self._panels: p.pack_forget()
-            for p in self._panels: p.pack(fill="x", padx=8, pady=(0, 6))
+            for p in self._panels: p.pack(**CollapsiblePanel.PACK_KW)
             self._save_panel_order()
             # Refrescar scrollregion
             self.after(50, lambda: self._sidebar_canvas.configure(
@@ -3516,7 +3765,7 @@ def run_gui(cfg: dict) -> None:
             if ordered != self._panels:
                 self._panels = ordered
                 for p in self._panels: p.pack_forget()
-                for p in self._panels: p.pack(fill="x", padx=8, pady=(0, 6))
+                for p in self._panels: p.pack(**CollapsiblePanel.PACK_KW)
             # Estado colapsado
             coll = self.cfg.get("panel_collapsed") or {}
             for p in self._panels:
@@ -3593,11 +3842,12 @@ def run_gui(cfg: dict) -> None:
             # Format-matrix labels y placeholder de video
             try: self._render_format_matrix()
             except Exception: pass
-            if hasattr(self, "video_placeholder") and not self._embedded_hwnd:
-                try:
-                    self.video_placeholder.configure(
-                        text=self._t("lbl.video_placeholder"))
+            if hasattr(self, "video_placeholder"):
+                try: self._paint_placeholder()
                 except Exception: pass
+            # Botones con texto (Iniciar / Captura / Grabar) + pastilla
+            try: self._update_buttons()
+            except Exception: pass
 
         # ===== Layout helper =====
         def _layout_main(self) -> None:
@@ -3626,30 +3876,61 @@ def run_gui(cfg: dict) -> None:
             self._embedded_hwnd = None
             self._embed_attempts = 0
             self._last_embed_rect: tuple[int, int, int, int] | None = None
-            self.video_holder = tk.Frame(self._target, bg="#000000",
+            self.video_holder = tk.Frame(self._target, bg=P["VIDEO_BG"],
                                           width=720, height=405)
             self.video_holder.pack(fill="both", expand=True)
-            self.video_placeholder = tk.Label(
-                self.video_holder, bg="#000000", fg="#888",
-                text=self._t("lbl.video_placeholder"),
-                font=("Segoe UI", 10),
-            )
+            # Estado vacio: glifo + titulo + pista + boton para arrancar.
+            # Es la primera pantalla que ve un usuario nuevo, asi que el
+            # siguiente paso (elegir dispositivo / iniciar) va escrito.
+            vbg = P["VIDEO_BG"]
+            self.video_placeholder = tk.Frame(self.video_holder, bg=vbg)
+            self._ph_glyph = tk.Label(self.video_placeholder, text="▶",
+                                       bg=vbg, font=FONT_PH_GLYPH)
+            self._ph_glyph.pack()
+            self._ph_title = tk.Label(self.video_placeholder, bg=vbg,
+                                       font=FONT_PH_TITLE)
+            self._ph_title.pack(pady=(6, 2))
+            self._ph_hint = tk.Label(self.video_placeholder, bg=vbg,
+                                      font=FONT_BODY, wraplength=360,
+                                      justify="center")
+            self._ph_hint.pack()
+            self._ph_btn = ttk.Button(self.video_placeholder,
+                                       style="Primary.TButton",
+                                       command=self._toggle_preview)
+            self._ph_btn.pack(pady=(16, 0))
+            self._paint_placeholder()
             self.video_placeholder.place(relx=0.5, rely=0.5, anchor="center")
+            ph_widgets = (self.video_placeholder, self._ph_glyph,
+                          self._ph_title, self._ph_hint)
             self.video_holder.bind("<Configure>", self._on_video_resize)
             # Scroll wheel sobre el holder -> volumen
             self.video_holder.bind("<MouseWheel>", self._on_video_wheel)
-            self.video_placeholder.bind("<MouseWheel>", self._on_video_wheel)
+            for w in ph_widgets:
+                w.bind("<MouseWheel>", self._on_video_wheel)
             # Click rueda (middle button) -> toggle mute
             def _mute_click(_e):
                 self._toggle_mute()
                 return "break"
             self.video_holder.bind("<Button-2>", _mute_click)
-            self.video_placeholder.bind("<Button-2>", _mute_click)
+            for w in ph_widgets:
+                w.bind("<Button-2>", _mute_click)
             # Doble-click -> toggle popup (focus mode)
             self.video_holder.bind("<Double-Button-1>",
                                     self._on_video_double_click)
-            self.video_placeholder.bind("<Double-Button-1>",
-                                         self._on_video_double_click)
+            for w in ph_widgets:
+                w.bind("<Double-Button-1>", self._on_video_double_click)
+
+        def _paint_placeholder(self) -> None:
+            """Textos + colores del estado vacio del video (i18n y tema)."""
+            vbg = P["VIDEO_BG"]
+            self.video_placeholder.configure(bg=vbg)
+            self._ph_glyph.configure(bg=vbg, fg=P["ACCENT"])
+            self._ph_title.configure(bg=vbg, fg=P["VIDEO_FG"],
+                                      text=self._t("lbl.video_placeholder"))
+            self._ph_hint.configure(bg=vbg, fg=P["VIDEO_SUB"],
+                                     text=self._t("lbl.video_hint"))
+            self._ph_btn.configure(
+                text=f"▶   {self._t('btn.preview_start')}")
 
         def _video_target_rect(self) -> tuple[int, int, int, int]:
             """Devuelve (x, y, w, h) del area de video, relativos al area cliente
@@ -3727,6 +4008,7 @@ def run_gui(cfg: dict) -> None:
                     self.after(300, lambda: self._set_ffplay_mute_live(True))
                 self._set_status(
                     f"Vista previa embebida ({w}x{h})")
+                self._refresh_status_pill()
             else:
                 if self._embed_attempts < 40:
                     self.after(500, self._try_embed)
@@ -3744,95 +4026,112 @@ def run_gui(cfg: dict) -> None:
             self._last_embed_rect = None
             self._ffplay_volume_ctl = None
             try:
-                self.video_placeholder.configure(
-                    text=self._t("lbl.video_placeholder"))
+                self._paint_placeholder()
                 self.video_placeholder.place(relx=0.5, rely=0.5, anchor="center")
             except Exception: pass
 
         # ===== Acciones =====
         # ===== Sidebar header: logo + quick controls + acciones =====
         def _build_sidebar_header(self) -> None:
-            f = ttk.Frame(self._target, padding=(10, 10, 10, 6))
+            f = ttk.Frame(self._target, padding=(14, 10, 10, 10))
             f.pack(fill="x")
 
-            # Logo / titulo
-            ttk.Label(f, text=APP_NAME,
-                       style="Title.TLabel").pack(anchor="w", pady=(0, 8))
-
-            # ----- Fila 1: SETTINGS (izq) + WINDOW CONTROLS (der) -----
-            # Todos los botones de esta fila usan el mismo style/tamano para
-            # consistencia visual. Grupos separados con un Separator.
-            row1 = ttk.Frame(f); row1.pack(fill="x")
-            ICON = "Icon.TButton"
-            BTN_W = 3
-
-            def add_icon(parent, text: str, cmd, tt_key: str, *,
+            def add_icon(parent, key: str, cmd, tt_key: str, *,
                           side: str = "left", attr: str | None = None,
-                          style: str = ICON) -> ttk.Button:
-                btn = ttk.Button(parent, text=text, width=BTN_W,
+                          style: str = "Icon.TButton") -> ttk.Button:
+                btn = ttk.Button(parent, text=ICONS[key], width=3,
                                   style=style, command=cmd)
-                pad = (0, 2) if side == "left" else (2, 0)
-                btn.pack(side=side, padx=pad)
+                btn.pack(side=side)
                 self._tt_track(btn, tt_key)
                 if attr: setattr(self, attr, btn)
                 return btn
 
-            # Grupo izquierdo: ajustes (side / lang / theme)
-            add_icon(row1, "⇆", self._toggle_sidebar_side, "tt.side_toggle")
-            add_icon(row1, "🌐", self._cycle_language, "tt.lang", attr="btn_lang")
-            theme_glyph = "🌙" if THEME_NAME == "light" else "☀"
-            add_icon(row1, theme_glyph, self._toggle_theme, "tt.theme",
-                      attr="btn_theme")
-
-            # Grupo derecho (orden visual: min · full · max · close)
-            add_icon(row1, "✕", self._close_app, "tt.close",
+            # ----- Fila 1: marca (izq) + controles de ventana (der) -----
+            # Hace de barra de titulo: la ventana es borderless y se
+            # arrastra desde cualquier zona que no sea un control.
+            top = ttk.Frame(f); top.pack(fill="x")
+            if LOGO_PNG is not None:
+                try:
+                    self._logo_img = tk.PhotoImage(file=str(LOGO_PNG))
+                    ttk.Label(top, image=self._logo_img).pack(
+                        side="left", padx=(0, 8))
+                except Exception: pass
+            ttk.Label(top, text=APP_NAME_SHORT,
+                       style="Brand.TLabel").pack(side="left")
+            ttk.Label(top, text=APP_NAME,
+                       style="BrandSub.TLabel").pack(
+                           side="left", padx=(8, 0), pady=(3, 0))
+            # Orden visual: min · full · max · close
+            add_icon(top, "close", self._close_app, "tt.close",
                       side="right", style="Close.TButton")
-            add_icon(row1, "🗖", self._toggle_maximize, "tt.maximize",
-                      side="right", attr="btn_max")
-            add_icon(row1, "⛶", self._toggle_fullscreen, "tt.fullscreen",
-                      side="right", attr="btn_full")
-            add_icon(row1, "🗕", self._hide, "tt.minimize", side="right")
+            add_icon(top, "max", self._toggle_maximize, "tt.maximize",
+                      side="right", attr="btn_max", style="Win.TButton")
+            add_icon(top, "full", self._toggle_fullscreen, "tt.fullscreen",
+                      side="right", attr="btn_full", style="Win.TButton")
+            add_icon(top, "min", self._hide, "tt.minimize",
+                      side="right", style="Win.TButton")
 
-            # ----- Fila 2: ACCIONES PRIMARIAS -----
-            # Una sola fila uniforme: mute · popup · preview · screenshot · record
-            # Mismo BTN_W y mismo Action.TButton — solo el style cambia para los
-            # primarios (acentuado).
-            row2 = ttk.Frame(f); row2.pack(fill="x", pady=(8, 0))
+            # ----- Tarjeta principal: estado + flujo jugar/capturar -----
+            card = ttk.Frame(f, style="Card.TFrame", padding=(14, 12))
+            card.pack(fill="x", pady=(12, 0), padx=(0, 4))
 
-            # Toggles secundarios (audio + focus)
-            add_icon(row2, "🔊" if not self.cfg.get("muted") else "🔇",
-                      self._toggle_mute, "tt.mute", attr="btn_mute")
-            add_icon(row2, "⤢", self._toggle_popup, "tt.popup",
-                      attr="btn_popup")
+            st = ttk.Frame(card, style="Card.TFrame", padding=0,
+                            borderwidth=0)
+            st.pack(fill="x")
+            self.status_pill = ttk.Label(st, style="PillIdle.TLabel")
+            self.status_pill.pack(side="left")
+            self.device_lbl = ttk.Label(st, style="CardSub.TLabel",
+                                          anchor="e")
+            self.device_lbl.pack(side="right", fill="x", expand=True,
+                                  padx=(10, 0))
 
-            # Pequeno separador visual antes de las acciones primarias
-            ttk.Frame(row2, width=8).pack(side="left")
+            self.btn_preview = ttk.Button(
+                card, style="Hero.TButton", command=self._toggle_preview)
+            self.btn_preview.pack(fill="x", pady=(12, 8))
+            self._tt_track(self.btn_preview, "tt.preview")
 
-            # Acciones primarias — Action.TButton (acento) pero MISMO BTN_W
-            add_icon(row2, "▶", self._toggle_preview, "tt.preview",
-                      attr="btn_preview", style="Action.TButton")
-            add_icon(row2, "📷", self._screenshot, "tt.screenshot",
-                      attr="btn_screenshot", style="Action.TButton")
-            self.btn_screenshot.configure(state="disabled")
+            row = ttk.Frame(card, style="Card.TFrame", padding=0,
+                             borderwidth=0)
+            row.pack(fill="x")
+            row.grid_columnconfigure(0, weight=1, uniform="act")
+            row.grid_columnconfigure(1, weight=1, uniform="act")
+            self.btn_screenshot = ttk.Button(
+                row, style="Action.TButton", command=self._screenshot)
+            self.btn_screenshot.grid(row=0, column=0, sticky="we",
+                                      padx=(0, 4))
+            self._tt_track(self.btn_screenshot, "tt.screenshot")
             self.btn_screenshot.bind(
                 "<Control-Button-1>",
                 lambda e: self._open_screenshot_dir())
-            add_icon(row2, "⏺", self._toggle_record, "tt.record",
-                      attr="btn_record", style="Action.TButton")
-            self.btn_record.configure(state="disabled")
+            self.btn_record = ttk.Button(
+                row, style="Action.TButton", command=self._toggle_record)
+            self.btn_record.grid(row=0, column=1, sticky="we", padx=(4, 0))
+            self._tt_track(self.btn_record, "tt.record")
             self.btn_record.bind(
                 "<Control-Button-1>",
                 lambda e: self._open_video_dir())
 
-            # ----- Fila 3: status + REC timer -----
-            row3 = ttk.Frame(f); row3.pack(fill="x", pady=(8, 0))
-            ttk.Label(row3, textvariable=self.var_status,
-                       style="Sub.TLabel").pack(side="left")
-            ttk.Label(row3, textvariable=self.var_timer,
-                       style="Rec.TLabel"
-                       ).pack(side="right")
+            # ----- Toolbar: toggles de sesion (izq) + ajustes (der) -----
+            tools = ttk.Frame(f); tools.pack(fill="x", pady=(8, 0))
+            muted = bool(self.cfg.get("muted"))
+            add_icon(tools, "mute" if muted else "vol", self._toggle_mute,
+                      "tt.mute", attr="btn_mute",
+                      style="IconOn.TButton" if muted else "Icon.TButton")
+            add_icon(tools, "focus", self._toggle_popup, "tt.popup",
+                      attr="btn_popup")
+            add_icon(tools, "moon" if THEME_NAME == "light" else "sun",
+                      self._toggle_theme, "tt.theme", side="right",
+                      attr="btn_theme")
+            add_icon(tools, "lang", self._cycle_language, "tt.lang",
+                      side="right", attr="btn_lang")
+            add_icon(tools, "side", self._toggle_sidebar_side,
+                      "tt.side_toggle", side="right")
+            # Linea de estado detallado (mensajes de ffmpeg, archivos, etc.)
+            ttk.Label(tools, textvariable=self.var_status,
+                       style="Sub.TLabel").pack(side="left", padx=(8, 0))
 
             self._title_label = f  # compat: drag handle
+            self._update_buttons()
 
         # _build_actions removido: ahora vive como header de la sidebar.
 
@@ -3855,17 +4154,16 @@ def run_gui(cfg: dict) -> None:
                 fixes = item.get("fixes", [])
                 bg, fg = _sev_colors().get(sev, (CARD, TEXT))
                 # Card de la diagnostico
-                card = tk.Frame(self.diag_inner, bg=bg, bd=0, padx=10, pady=8)
-                card.pack(fill="x", pady=2)
+                outer = tk.Frame(self.diag_inner, bg=bg, bd=0)
+                outer.pack(fill="x", pady=3)
+                tk.Frame(outer, bg=fg, width=3).pack(side="left", fill="y")
+                card = tk.Frame(outer, bg=bg, bd=0, padx=10, pady=8)
+                card.pack(side="left", fill="x", expand=True)
                 # Fila 1: glyph + mensaje (full width)
                 row = tk.Frame(card, bg=bg)
                 row.pack(fill="x")
-                glyph = SEV_GLYPH.get(sev, "·")
-                tk.Label(row, text=glyph, bg=bg, fg=fg,
-                          font=("Segoe UI", 11, "bold"), width=2
-                          ).pack(side="left", anchor="n")
-                tk.Label(row, text=msg, bg=bg, fg=fg,
-                          font=("Segoe UI", 9), anchor="w",
+                tk.Label(row, text=msg, bg=bg, fg=fg if sev != "info" else TEXT,
+                          font=FONT_SUB, anchor="w",
                           wraplength=avail, justify="left"
                           ).pack(side="left", fill="x", expand=True)
                 # Fila 2: botones de fix (debajo, alineados a la derecha)
@@ -3878,8 +4176,9 @@ def run_gui(cfg: dict) -> None:
                         btn = tk.Button(
                             btn_row, text=label, bg=CARD, fg=fg,
                             activebackground=HOVER_BG, activeforeground=fg,
-                            relief="solid", borderwidth=1,
-                            font=("Segoe UI", 9, "bold"),
+                            relief="flat", borderwidth=0,
+                            highlightthickness=1, highlightbackground=fg,
+                            font=FONT_PILL,
                             cursor="hand2", padx=10, pady=3,
                             command=lambda c=changes: self._apply_fix(c),
                         )
@@ -4018,6 +4317,7 @@ def run_gui(cfg: dict) -> None:
         def _on_video_changed(self) -> None:
             # Re-consultar formatos en hilo aparte
             device = self.cfg.get("video_device")
+            self._refresh_status_pill()
             self.fmt_status.config(text=self._t("lbl.fmt_loading"))
             self._formats = {}
             self._render_format_matrix()
@@ -4077,7 +4377,8 @@ def run_gui(cfg: dict) -> None:
                              ["libx264", "libx265", "h264_nvenc", "hevc_nvenc"],
                              label_key="lbl.codec_video"); r += 1
             # Advisor de GPU
-            self.codec_adv = ttk.Label(f, text="", style="Sub.TLabel")
+            self.codec_adv = ttk.Label(f, text="", style="Sub.TLabel",
+                                        wraplength=340, justify="left")
             self.codec_adv.grid(row=r, column=0, columnspan=3, sticky="w",
                                  padx=4, pady=(0, 4))
             r += 1
@@ -4187,19 +4488,19 @@ def run_gui(cfg: dict) -> None:
             if key not in HELP_TRANSLATIONS.get(self.lang, {}) \
                     and key not in HELP_TRANSLATIONS.get("es", {}):
                 return
-            lbl = tk.Label(parent, text="?",
-                            bg=P["CARD"], fg=P["SUB"],
-                            font=("Segoe UI", 9, "bold"),
-                            cursor="question_arrow",
-                            relief="solid", borderwidth=1,
-                            padx=6, pady=0, width=2)
-            lbl.grid(row=r, column=2, padx=(2, 4), pady=2)
-            # Hover: cambio sutil de color
+            lbl = tk.Label(parent, text="ⓘ",
+                            bg=P["BG"], fg=P["MUTED"],
+                            font=FONT_BODY, cursor="question_arrow",
+                            borderwidth=0, padx=4, pady=0)
+            lbl.grid(row=r, column=2, padx=(2, 0), pady=2)
+            if not hasattr(self, "_help_labels"): self._help_labels = []
+            self._help_labels.append(lbl)
+            # Hover: el icono toma el acento
             def _enter(_e):
-                try: lbl.configure(bg=P["HOVER_BG"], fg=P["ACCENT"])
+                try: lbl.configure(fg=P["ACCENT"])
                 except Exception: pass
             def _leave(_e):
-                try: lbl.configure(bg=P["CARD"], fg=P["SUB"])
+                try: lbl.configure(fg=P["MUTED"])
                 except Exception: pass
             lbl.bind("<Enter>", _enter)
             lbl.bind("<Leave>", _leave)
@@ -4562,21 +4863,50 @@ def run_gui(cfg: dict) -> None:
         def _update_buttons(self) -> None:
             running = self.is_running()
             recording = self.is_recording()
-            self.btn_preview.configure(text="⏹" if running else "▶")
+            if running:
+                self.btn_preview.configure(
+                    text=f"■   {self._t('btn.preview_stop')}",
+                    style="HeroStop.TButton")
+            else:
+                self.btn_preview.configure(
+                    text=f"▶   {self._t('btn.preview_start')}",
+                    style="Hero.TButton")
             self.btn_screenshot.configure(
+                text=f"📷  {self._t('btn.screenshot')}",
                 state="normal" if running else "disabled")
             if not running:
                 self.btn_record.configure(
-                    state="disabled", text="⏺",
+                    state="disabled", text=f"●  {self._t('btn.record')}",
                     style="Action.TButton")
             elif recording:
                 self.btn_record.configure(
-                    state="normal", text="⏹",
+                    state="normal", text=f"■  {self._t('btn.record_stop')}",
                     style="ActionRec.TButton")
             else:
                 self.btn_record.configure(
-                    state="normal", text="⏺",
+                    state="normal", text=f"●  {self._t('btn.record')}",
                     style="Action.TButton")
+            self._refresh_status_pill()
+
+        def _refresh_status_pill(self) -> None:
+            """Pastilla de estado de la tarjeta principal + nombre del
+            dispositivo. Se llama desde _update_buttons y desde _poll (para
+            que el contador REC avance)."""
+            if not hasattr(self, "status_pill"): return
+            if self.is_recording():
+                style, text = "PillRec.TLabel", self._t(
+                    "pill.rec", time=self.var_timer.get().replace("REC", "").strip()
+                    or "00:00")
+            elif self.is_running() and self._embedded_hwnd:
+                style, text = "PillLive.TLabel", self._t("pill.live")
+            elif self.is_running():
+                style, text = "PillWait.TLabel", self._t("pill.starting")
+            else:
+                style, text = "PillIdle.TLabel", self._t("pill.idle")
+            self.status_pill.configure(style=style, text=f"●  {text}")
+            dev = self.cfg.get("video_device") or self._t("lbl.no_device")
+            if len(dev) > 34: dev = dev[:33] + "…"
+            self.device_lbl.configure(text=dev)
 
         def _guard_ready(self) -> bool:
             if not check_tools(quiet=True):
@@ -4765,6 +5095,7 @@ def run_gui(cfg: dict) -> None:
                     self._set_status(f"Cerrado · {msg}" if msg else "Cerrado")
             else:
                 self.var_timer.set("")
+            self._refresh_status_pill()
             self.after(500, self._poll)
 
         def _on_close(self) -> None:
