@@ -82,10 +82,6 @@ Requires Windows 10 or 11 (64-bit). Checksums for every file are in `SHA256SUMS.
 
 If CCV saves you time, you can [sponsor the project on GitHub](https://github.com/sponsors/manucruzleiva). Totally optional, very appreciated.
 
-## Tech / contributing
-
-If you want to look under the hood, build from source, contribute, or understand how the embedded preview works, see **[DEVELOPMENT.md](DEVELOPMENT.md)**.
-
 ## License
 
 MIT — see [LICENSE](LICENSE). Free to use, modify, share.

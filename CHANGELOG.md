@@ -35,6 +35,9 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 - The app icon (`icon.png`, `icon.ico`) now has a transparent background instead of a light grey square, so it looks right on the taskbar, desktop and dark backgrounds.
 - Switching theme from the GUI no longer stops halfway: the theme handler passed `bg=` to a ttk frame, which raised an error before the panel headers were recolored and before the choice was saved.
 
+### Removed
+- Developer-only documents from the repository (`DEVELOPMENT.md`, `GOAL.MD`, `assets/README.md`). The repo now only carries what is needed to run and release CCV; agent / build notes moved into `.claude/CLAUDE.md`.
+
 ## [0.7.1] — 2026-05-03
 
 ### Fixed
