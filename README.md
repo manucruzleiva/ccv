@@ -2,7 +2,7 @@
 
 **Play and record your Switch, PS5, Xbox or any USB capture card directly inside Windows — no second TV, no extra HDMI input, no streaming overlay.**
 
-Plug your console into a USB capture card, plug the card into your PC, open CCV, and your console runs in a window on your desktop. Play it like any other game, record clips when you want, screenshot with PrintScreen. Uses about 50 MB of RAM, opens in a couple of seconds, no installer.
+Plug your console into a USB capture card, plug the card into your PC, open CCV, and your console runs in a window on your desktop. Play it like any other game, record clips when you want, screenshot with PrintScreen. Uses about 50 MB of RAM, opens in a couple of seconds, and keeps itself up to date.
 
 ![screenshot placeholder](assets/screenshot.png)
 
@@ -17,9 +17,17 @@ CCV is the in-between. Open the window. See your console. Play. Record when you 
 
 ## Get it
 
-**[⬇ Download `ccv.exe`](https://github.com/manucruzleiva/ccv/releases/latest)** — single file, ~135 MB, no installer needed. Everything required (including ffmpeg) is bundled inside.
+Pick one. All of them bundle everything CCV needs (including ffmpeg); nothing else to install.
 
-Just save it anywhere (Desktop, Downloads, a USB stick…) and double-click to run.
+| Download | What it is |
+|---|---|
+| **[⬇ Installer — `ccv-setup.exe`](https://github.com/manucruzleiva/ccv/releases/latest/download/ccv-setup.exe)** | Recommended. Installs for your user only (no admin rights), adds a Start-menu entry and an uninstaller. Fastest startup. |
+| **[⬇ Portable — `ccv-portable.zip`](https://github.com/manucruzleiva/ccv/releases/latest/download/ccv-portable.zip)** | Unzip anywhere (a USB stick, a synced folder) and run `ccv.exe`. Settings are saved in that folder, not on the PC. |
+| **[⬇ Single file — `ccv.exe`](https://github.com/manucruzleiva/ccv/releases/latest/download/ccv.exe)** | One ~135 MB file, double-click to run. Takes a second or two longer to open. |
+
+Requires Windows 10 or 11 (64-bit). Checksums for every file are in `SHA256SUMS.txt` on the [release page](https://github.com/manucruzleiva/ccv/releases/latest).
+
+**Updates:** CCV tells you when a new version is out (a small notice and an **Install** link in the **System** panel). Click it and CCV downloads the update, checks it, restarts and you're on the new version. It only talks to GitHub to ask for the latest version number, never sends anything about you, and you can switch the check off.
 
 > **First time?** Windows might warn that the app is "unrecognized" because it's not signed with a paid Microsoft certificate. Click **More info → Run anyway**. The source code is right here in this repo if you want to inspect it before running.
 

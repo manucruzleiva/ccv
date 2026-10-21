@@ -4,6 +4,18 @@ All notable changes to **CCV — Capture Card Viewer** are documented here.
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] — 2026-10-21
+
+### Added
+- In-app updates (OTA) from GitHub Releases. CCV checks for a new version on startup (at most every 12 hours, toggle **Check on startup** in the **System** panel) and shows a toast plus an **Install vX.Y.Z** link; nothing is downloaded or installed until you click it and confirm. The download is verified against the release's `SHA256SUMS.txt` before anything is replaced, and CCV closes and reopens itself on the new version. Refuses to update while a recording is in progress.
+- Installer (`ccv-setup.exe`, Inno Setup): per-user install into `%LOCALAPPDATA%\Programs\CCV` with Start-menu entry, optional desktop icon and a regular uninstaller. No admin rights / UAC prompt needed, so updates can run silently.
+- Portable zip (`ccv-portable.zip`): the fast-starting folder build plus a `ccv.portable` marker, which makes CCV store its settings in `ccv.json` next to `ccv.exe` instead of in the user profile (pendrive-friendly). On first run it copies over any existing `~/.ccv.json`.
+- `SHA256SUMS.txt` attached to every release, and `ccv --version` on the command line.
+
+### Changed
+- Releases now ship four assets: `ccv-setup.exe`, `ccv-portable.zip`, the single-file `ccv.exe` (unchanged, still portable) and `SHA256SUMS.txt`. Asset names carry no version so `releases/latest/download/<name>` links stay stable.
+- The release workflow also runs (build only, no publish) on pull requests that touch packaging, fails a tag whose name doesn't match `APP_VERSION`, pins PyInstaller to 6.x and logs the bundled ffmpeg version and archive hash.
+
 ## [0.7.1] — 2026-05-03
 
 ### Fixed
@@ -123,6 +135,7 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 - ffmpeg auto-installer and Desktop shortcut.
 - CLI subcommands: `preview`, `screenshot`, `record`, `install`, `build`, `devices`.
 
+[0.8.0]: https://github.com/manucruzleiva/ccv/releases/tag/v0.8.0
 [0.7.1]: https://github.com/manucruzleiva/ccv/releases/tag/v0.7.1
 [0.7.0]: https://github.com/manucruzleiva/ccv/releases/tag/v0.7.0
 [0.6.0]: https://github.com/manucruzleiva/ccv/releases/tag/v0.6.0

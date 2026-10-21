@@ -63,16 +63,56 @@ if LOCAL_BIN is None:
 APP_NAME = "Capture Card Viewer"
 APP_NAME_SHORT = "CCV"
 APP_ID = "ccv"   # exe name, config filename, AppUserModelID suffix
-APP_VERSION = "0.7.1"
+APP_VERSION = "0.8.0"
 APP_AUMID = f"com.ccv.captureCardViewer"  # taskbar grouping en Windows
 APP_REPO_URL = "https://github.com/manucruzleiva/ccv"
 APP_CHANGELOG_URL = f"{APP_REPO_URL}/blob/main/CHANGELOG.md"
+APP_RELEASES_URL = f"{APP_REPO_URL}/releases/latest"
+APP_RELEASES_API = "https://api.github.com/repos/manucruzleiva/ccv/releases/latest"
 
-CONFIG_PATH = Path.home() / f".{APP_ID}.json"
+# Nombres de los assets que publica CI en cada GitHub Release. Son fijos
+# (sin version) para que /releases/latest/download/<name> sea un link estable.
+ASSET_SETUP = f"{APP_ID}-setup.exe"        # instalador Inno Setup (per-user)
+ASSET_PORTABLE_ZIP = f"{APP_ID}-portable.zip"  # carpeta onedir + marcador portable
+ASSET_ONEFILE = f"{APP_ID}.exe"            # exe unico (portable clasico)
+ASSET_SUMS = "SHA256SUMS.txt"
+
+# Modo portable: si junto al exe hay un archivo `ccv.portable`, la config
+# vive al lado del exe (pendrive / carpeta sincronizada) en vez de en $HOME.
+PORTABLE_MARKER = SCRIPT_DIR / f"{APP_ID}.portable"
+IS_PORTABLE_DATA = PORTABLE_MARKER.exists()
+
+
+def detect_install_mode() -> str:
+    """Como se distribuyo esta copia: decide que asset baja el updater.
+
+    source        python ccv.py (sin auto-update, solo link a Releases)
+    installed     instalado con ccv-setup.exe (Inno deja unins000.exe)
+    portable_dir  carpeta descomprimida de ccv-portable.zip (--onedir)
+    portable_exe  ccv.exe unico (--onefile)
+    """
+    if not IS_FROZEN:
+        return "source"
+    if (SCRIPT_DIR / "unins000.exe").exists():
+        return "installed"
+    if (SCRIPT_DIR / "_internal").is_dir():
+        return "portable_dir"
+    return "portable_exe"
+
+
+INSTALL_MODE = detect_install_mode()
+
+_HOME_CONFIG = Path.home() / f".{APP_ID}.json"
+CONFIG_PATH = (SCRIPT_DIR / f"{APP_ID}.json") if IS_PORTABLE_DATA else _HOME_CONFIG
 # Compatibilidad: si existe el cfg viejo y no el nuevo, lo migramos.
 _LEGACY_CONFIG = Path.home() / ".switch_capture.json"
-if _LEGACY_CONFIG.exists() and not CONFIG_PATH.exists():
-    try: _LEGACY_CONFIG.replace(CONFIG_PATH)
+if _LEGACY_CONFIG.exists() and not _HOME_CONFIG.exists():
+    try: _LEGACY_CONFIG.replace(_HOME_CONFIG)
+    except Exception: pass
+# Primera vez en modo portable: arrancar con la config que ya tenia el user
+# (copia, no move: la instalacion normal sigue intacta).
+if IS_PORTABLE_DATA and not CONFIG_PATH.exists() and _HOME_CONFIG.exists():
+    try: shutil.copyfile(_HOME_CONFIG, CONFIG_PATH)
     except Exception: pass
 
 # Iconos: buscar en (1) assets/ junto al script o (2) _MEIPASS/assets en frozen.
@@ -127,6 +167,21 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "sys.diagnostics":   "Diagnostico:",
         "sys.version":       "Version:",
         "sys.history":       "Ver historial de cambios",
+        "sys.updates":       "Actualizaciones:",
+        "upd.check":         "Buscar actualizaciones",
+        "upd.checking":      "Buscando actualizaciones...",
+        "upd.uptodate":      "Estas al dia (v{ver}) · buscar de nuevo",
+        "upd.available":     "⬆ Instalar v{ver}",
+        "upd.source":        "⬆ v{ver} disponible · abrir descargas",
+        "upd.downloading":   "Descargando v{ver}... {pct}",
+        "upd.failed":        "No se pudo buscar actualizaciones · reintentar",
+        "upd.auto":          "Buscar al iniciar",
+        "upd.toast":         "⬆ CCV v{ver} disponible · panel Sistema",
+        "upd.busy_rec":      "Deten la grabacion antes de actualizar",
+        "upd.confirm_title": "Actualizar CCV",
+        "upd.confirm":       "Se descargara e instalara CCV v{ver}.\n\nLa aplicacion se cerrara y volvera a abrirse sola al terminar. ¿Continuar?",
+        "upd.err":           "Actualizacion fallida: {msg}",
+        "upd.restarting":    "Instalando v{ver}, CCV se reiniciara...",
         # labels (form fields)
         "lbl.video":         "Video",
         "lbl.audio":         "Audio",
@@ -192,6 +247,21 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "sys.diagnostics":   "Diagnostics:",
         "sys.version":       "Version:",
         "sys.history":       "View changelog",
+        "sys.updates":       "Updates:",
+        "upd.check":         "Check for updates",
+        "upd.checking":      "Checking for updates...",
+        "upd.uptodate":      "Up to date (v{ver}) · check again",
+        "upd.available":     "⬆ Install v{ver}",
+        "upd.source":        "⬆ v{ver} available · open downloads",
+        "upd.downloading":   "Downloading v{ver}... {pct}",
+        "upd.failed":        "Could not check for updates · retry",
+        "upd.auto":          "Check on startup",
+        "upd.toast":         "⬆ CCV v{ver} available · System panel",
+        "upd.busy_rec":      "Stop the recording before updating",
+        "upd.confirm_title": "Update CCV",
+        "upd.confirm":       "CCV v{ver} will be downloaded and installed.\n\nThe app will close and reopen by itself when done. Continue?",
+        "upd.err":           "Update failed: {msg}",
+        "upd.restarting":    "Installing v{ver}, CCV will restart...",
         "lbl.video":         "Video",
         "lbl.audio":         "Audio",
         "lbl.always_on_top": "Always on top",
@@ -592,6 +662,13 @@ HELP_TRANSLATIONS: dict[str, dict[str, tuple[str, str]]] = {
             "Guarda un PNG en la carpeta configurada.\n"
             "Si lo desactivas, las capturas solo van al portapapeles."
         ),
+
+        "update_check": (
+            "Buscar actualizaciones al iniciar",
+            "Como maximo cada 12 horas, CCV consulta GitHub Releases para ver\n"
+            "si hay una version nueva. No se envia ningun dato tuyo.\n"
+            "Nunca se instala nada sin que hagas click en 'Instalar'."
+        ),
     },
     "en": {
         "resolution": (
@@ -696,6 +773,12 @@ HELP_TRANSLATIONS: dict[str, dict[str, tuple[str, str]]] = {
             "Saves a PNG in the configured folder.\n"
             "If disabled, screenshots only go to the clipboard."
         ),
+        "update_check": (
+            "Check for updates on startup",
+            "At most every 12 hours, CCV asks GitHub Releases whether a new\n"
+            "version exists. None of your data is sent.\n"
+            "Nothing is installed until you click 'Install'."
+        ),
     },
 }
 
@@ -732,6 +815,10 @@ DEFAULTS: dict = {
     "panel_order": [],                    # ej. ["sec.devices", "sec.quality", ...]
     "panel_collapsed": {},                # ej. {"sec.system": True}
     "window_geometry": "",                # "WxH+X+Y" del Tk root
+    # Actualizaciones OTA (GitHub Releases). Solo se consulta la API publica
+    # de GitHub; no se envia ningun dato del user.
+    "update_check": True,                 # buscar al iniciar
+    "update_last_check": 0.0,             # epoch del ultimo chequeo automatico
 }
 
 
@@ -1605,6 +1692,216 @@ def make_shortcut(name: str = APP_NAME) -> tuple[bool, str]:
     if r.returncode != 0:
         return False, f"Error: {r.stderr.strip() or r.stdout.strip()}"
     return True, str(lnk)
+
+
+# --------------------------------------------------------------------------- #
+# Actualizaciones OTA via GitHub Releases
+# --------------------------------------------------------------------------- #
+# Flujo: check_latest_release() consulta la API publica -> si hay una version
+# mas nueva, download_update() baja el asset que corresponde al modo de
+# instalacion y verifica su SHA-256 contra SHA256SUMS.txt -> apply_update()
+# deja corriendo un helper PowerShell que espera a que CCV cierre, reemplaza
+# los archivos (o corre el instalador en modo silencioso) y relanza la app.
+# Nada de esto bloquea el hilo de Tk: la GUI lo llama desde threads.
+UPDATE_CHECK_INTERVAL_S = 12 * 3600
+_HTTP_UA = f"{APP_ID}/{APP_VERSION} (+{APP_REPO_URL})"
+
+
+def parse_version(s: str) -> tuple[int, ...] | None:
+    """'v0.8.0' / '0.8.0' -> (0, 8, 0). Pre-releases ('0.8.0-rc1') -> None
+    para que nunca se ofrezcan como update estable."""
+    m = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)", (s or "").strip())
+    return tuple(int(x) for x in m.groups()) if m else None
+
+
+def is_newer_version(remote: str, local: str = APP_VERSION) -> bool:
+    r, l = parse_version(remote), parse_version(local)
+    return bool(r and l and r > l)
+
+
+def _http_get(url: str, timeout: float = 10.0):
+    import urllib.request
+    req = urllib.request.Request(url, headers={
+        "User-Agent": _HTTP_UA,
+        "Accept": "application/vnd.github+json, application/octet-stream",
+    })
+    return urllib.request.urlopen(req, timeout=timeout)
+
+
+def check_latest_release(timeout: float = 8.0) -> dict:
+    """Devuelve {'version', 'tag', 'url', 'assets': {name: download_url}}.
+    Lanza excepcion si la red / API falla (el caller decide como avisar)."""
+    with _http_get(APP_RELEASES_API, timeout=timeout) as r:
+        data = json.loads(r.read().decode("utf-8"))
+    tag = str(data.get("tag_name") or "")
+    return {
+        "version": tag.lstrip("v"),
+        "tag": tag,
+        "url": data.get("html_url") or APP_RELEASES_URL,
+        "draft": bool(data.get("draft")),
+        "prerelease": bool(data.get("prerelease")),
+        "assets": {a.get("name"): a.get("browser_download_url")
+                   for a in data.get("assets", []) if a.get("name")},
+    }
+
+
+def update_asset_for_mode(mode: str = INSTALL_MODE) -> str | None:
+    return {
+        "installed": ASSET_SETUP,
+        "portable_dir": ASSET_PORTABLE_ZIP,
+        "portable_exe": ASSET_ONEFILE,
+    }.get(mode)
+
+
+def _sha256_file(path: Path) -> str:
+    import hashlib
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def parse_sha256sums(text: str) -> dict[str, str]:
+    """Formato sha256sum: '<hex>  <name>' (o '<hex> *<name>')."""
+    out: dict[str, str] = {}
+    for line in text.splitlines():
+        parts = line.strip().split(None, 1)
+        if len(parts) == 2 and re.fullmatch(r"[0-9a-fA-F]{64}", parts[0]):
+            out[parts[1].lstrip("*").strip()] = parts[0].lower()
+    return out
+
+
+def download_update(release: dict, dest_dir: Path,
+                    progress=None) -> Path:
+    """Baja el asset para este modo de instalacion y verifica su hash.
+    progress(done_bytes, total_bytes) se llama desde el thread de descarga."""
+    name = update_asset_for_mode()
+    if not name:
+        raise RuntimeError("Esta copia no se puede actualizar automaticamente.")
+    url = release["assets"].get(name)
+    sums_url = release["assets"].get(ASSET_SUMS)
+    if not url:
+        raise RuntimeError(f"La release {release['tag']} no incluye {name}.")
+    if not sums_url:
+        raise RuntimeError(f"La release {release['tag']} no incluye {ASSET_SUMS}.")
+    with _http_get(sums_url, timeout=15) as r:
+        expected = parse_sha256sums(r.read().decode("utf-8", "replace")).get(name)
+    if not expected:
+        raise RuntimeError(f"{ASSET_SUMS} no lista {name}.")
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / name
+    part = dest.with_name(dest.name + ".part")
+    with _http_get(url, timeout=30) as r, open(part, "wb") as f:
+        total = int(r.headers.get("Content-Length") or 0)
+        done = 0
+        while True:
+            chunk = r.read(1 << 16)
+            if not chunk: break
+            f.write(chunk)
+            done += len(chunk)
+            if progress: progress(done, total)
+    got = _sha256_file(part)
+    if got != expected:
+        try: part.unlink()
+        except OSError: pass
+        raise RuntimeError("El archivo descargado no coincide con su SHA-256; "
+                           "se descarto por seguridad.")
+    part.replace(dest)
+    return dest
+
+
+def _ps_quote(p) -> str:
+    return "'" + str(p).replace("'", "''") + "'"
+
+
+def apply_update(downloaded: Path, mode: str = INSTALL_MODE) -> None:
+    """Deja un helper PowerShell esperando a que CCV salga; el caller debe
+    cerrar la app justo despues. El helper reemplaza / instala y relanza."""
+    work = downloaded.parent
+    exe = Path(sys.executable).resolve()
+    pids = [os.getpid()]
+    if mode == "portable_exe":
+        # --onefile: el bootloader (padre) es el que mantiene ccv.exe abierto.
+        pids.append(os.getppid())
+    lines = [
+        "$ErrorActionPreference = 'Stop'",
+        f"$log = {_ps_quote(work / 'update.log')}",
+        "function Log($m) { Add-Content -Path $log -Value \"$(Get-Date -Format s) $m\" }",
+        f"foreach ($p in @({', '.join(str(x) for x in pids)})) {{",
+        "  try { Wait-Process -Id $p -Timeout 60 -ErrorAction SilentlyContinue } catch {}",
+        "}",
+        "Start-Sleep -Milliseconds 500",
+        "try {",
+    ]
+    if mode == "installed":
+        lines += [
+            f"  $p = Start-Process -FilePath {_ps_quote(downloaded)} "
+            "-ArgumentList '/SILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-' "
+            "-Wait -PassThru",
+            "  Log \"setup exit code $($p.ExitCode)\"",
+        ]
+    elif mode == "portable_exe":
+        lines += [
+            "  $ok = $false",
+            "  for ($i = 0; $i -lt 20 -and -not $ok; $i++) {",
+            f"    try {{ Move-Item -Force {_ps_quote(downloaded)} {_ps_quote(exe)}; $ok = $true }}",
+            "    catch { Start-Sleep -Milliseconds 500 }",
+            "  }",
+            "  if (-not $ok) { throw 'no pude reemplazar el exe (sigue en uso)' }",
+        ]
+    elif mode == "portable_dir":
+        app = exe.parent
+        stage = work / "portable"
+        lines += [
+            f"  $stage = {_ps_quote(stage)}",
+            f"  $app = {_ps_quote(app)}",
+            "  if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }",
+            f"  Expand-Archive -Force -Path {_ps_quote(downloaded)} -DestinationPath $stage",
+            # El zip puede traer los archivos en la raiz o dentro de ccv/.
+            f"  if (Test-Path (Join-Path $stage '{APP_ID}\\{APP_ID}.exe')) "
+            f"{{ $stage = Join-Path $stage '{APP_ID}' }}",
+            "  $old = Join-Path $app '_internal'",
+            "  $bak = Join-Path $app '_internal.old'",
+            "  if (Test-Path $bak) { Remove-Item -Recurse -Force $bak }",
+            "  if (Test-Path $old) { Rename-Item $old '_internal.old' }",
+            "  try {",
+            # La config portable (ccv.json) no viene en el zip: no se pisa.
+            "    Copy-Item -Recurse -Force (Join-Path $stage '*') $app",
+            "    Remove-Item -Recurse -Force $bak -ErrorAction SilentlyContinue",
+            "  } catch {",
+            "    if (Test-Path $bak) {",
+            "      Remove-Item -Recurse -Force $old -ErrorAction SilentlyContinue",
+            "      Rename-Item $bak '_internal'",
+            "    }",
+            "    throw",
+            "  }",
+        ]
+    else:
+        raise RuntimeError(f"Modo de instalacion sin auto-update: {mode}")
+    lines += [
+        "  Log 'update ok'",
+        "} catch { Log \"update FAILED: $_\" }",
+        # Relanzar siempre: con la version nueva o, si fallo, con la vieja.
+        f"Start-Process -FilePath {_ps_quote(exe)}",
+    ]
+    script = work / "apply_update.ps1"
+    # BOM: PowerShell 5.1 lee .ps1 sin BOM como ANSI y rompe rutas no-ASCII.
+    script.write_text("\r\n".join(lines) + "\r\n", encoding="utf-8-sig")
+    flags = SUBPROC_FLAGS
+    if _IS_WIN:
+        flags |= subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore[attr-defined]
+    subprocess.Popen(
+        ["powershell", "-NoProfile", "-NonInteractive",
+         "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden",
+         "-File", str(script)],
+        creationflags=flags, close_fds=True)
+
+
+def update_work_dir() -> Path:
+    import tempfile
+    return Path(tempfile.gettempdir()) / f"{APP_ID}-update"
 
 
 def build_exe(onedir: bool = False) -> int:
@@ -3111,6 +3408,9 @@ def run_gui(cfg: dict) -> None:
             if hasattr(self, "ver_label"):
                 try: self.ver_label.configure(bg=BG, fg=ACCENT)
                 except Exception: pass
+            if hasattr(self, "upd_label"):
+                try: self.upd_label.configure(bg=BG, fg=ACCENT)
+                except Exception: pass
 
             # Re-render contenido dinamico
             self._refresh_diagnostics()
@@ -3284,6 +3584,8 @@ def run_gui(cfg: dict) -> None:
                     self.ver_label.configure(
                         text=f"v{APP_VERSION}  ▸  {self._t('sys.history')}")
                 except Exception: pass
+            if hasattr(self, "upd_label"):
+                self._render_update_label()
             # Status: actualizar al "Listo" del idioma nuevo solo si es generico
             generic_status = {"Listo", "Ready"}
             if self.var_status.get() in generic_status:
@@ -3842,6 +4144,28 @@ def run_gui(cfg: dict) -> None:
             ToolTip(self.ver_label,
                     "Ver el historial de versiones con features y bugs corregidos en cada release.")
 
+            lbl_upd = ttk.Label(f, text=self._t("sys.updates"),
+                                  style="Sub.TLabel")
+            lbl_upd.pack(anchor="w", pady=(10, 0))
+            self._label_keys.append((lbl_upd, "sys.updates"))
+            self.upd_label = tk.Label(
+                f, text="", bg=BG, fg=ACCENT, cursor="hand2",
+                font=FONT_BODY, anchor="w", justify="left")
+            self.upd_label.pack(anchor="w")
+            self.upd_label.bind("<Button-1>",
+                                 lambda e: (self._on_update_click(), "break")[1])
+            self.upd_label.bind(
+                "<Enter>",
+                lambda e: self.upd_label.configure(font=(FONT_BODY[0], FONT_BODY[1], "underline")))
+            self.upd_label.bind(
+                "<Leave>",
+                lambda e: self.upd_label.configure(font=FONT_BODY))
+            upd_opts = ttk.Frame(f)
+            upd_opts.pack(fill="x")
+            self._add_check(upd_opts, 0, "Buscar al iniciar", "update_check",
+                             label_key="upd.auto")
+            self._render_update_label()
+
         # ---------- builders ----------
         def _help_for(self, key: str) -> str:
             """Devuelve el texto de ayuda en el idioma actual.
@@ -4035,6 +4359,12 @@ def run_gui(cfg: dict) -> None:
                 self._on_video_changed()
             else:
                 self._refresh_diagnostics()
+            # Update check diferido: no compite con el primer paint ni con
+            # la enumeracion de dispositivos.
+            if self.cfg.get("update_check", True):
+                last = float(self.cfg.get("update_last_check") or 0)
+                if time.time() - last >= UPDATE_CHECK_INTERVAL_S:
+                    self.after(4000, lambda: self._check_updates(manual=False))
 
         def _on_gpu_detected(self, gpu: str) -> None:
             self._gpu = gpu
@@ -4102,6 +4432,129 @@ def run_gui(cfg: dict) -> None:
                 self._set_status(f"Abierto: {APP_CHANGELOG_URL}")
             except Exception as e:
                 self._set_status(f"No pude abrir el browser: {e}")
+
+        # ---------- Actualizaciones OTA ----------
+        # Estado: idle | checking | uptodate | available | downloading | failed
+        def _render_update_label(self) -> None:
+            if not hasattr(self, "upd_label"): return
+            st = getattr(self, "_upd_state", "idle")
+            rel = getattr(self, "_upd_release", None)
+            ver = rel["version"] if rel else APP_VERSION
+            if st == "checking":
+                text = self._t("upd.checking")
+            elif st == "uptodate":
+                text = self._t("upd.uptodate", ver=APP_VERSION)
+            elif st == "available":
+                key = "upd.source" if update_asset_for_mode() is None else "upd.available"
+                text = self._t(key, ver=ver)
+            elif st == "downloading":
+                text = self._t("upd.downloading", ver=ver,
+                                pct=getattr(self, "_upd_pct", ""))
+            elif st == "failed":
+                text = self._t("upd.failed")
+            else:
+                text = self._t("upd.check")
+            try: self.upd_label.configure(text=text)
+            except Exception: pass
+
+        def _set_update_state(self, state: str) -> None:
+            self._upd_state = state
+            self._render_update_label()
+
+        def _on_update_click(self) -> None:
+            st = getattr(self, "_upd_state", "idle")
+            if st in ("checking", "downloading"):
+                return
+            if st == "available":
+                self._install_update()
+            else:
+                self._check_updates(manual=True)
+
+        def _check_updates(self, manual: bool) -> None:
+            if getattr(self, "_upd_state", "idle") in ("checking", "downloading"):
+                return
+            self._set_update_state("checking")
+            def worker():
+                try:
+                    rel = check_latest_release()
+                    err = None
+                except Exception as e:
+                    rel, err = None, e
+                self.after(0, lambda: self._on_update_checked(rel, err, manual))
+            threading.Thread(target=worker, daemon=True).start()
+
+        def _on_update_checked(self, rel, err, manual: bool) -> None:
+            self.cfg["update_last_check"] = time.time()
+            self._save_cfg()
+            if err is not None:
+                # Sin red / rate limit de GitHub: solo avisar si lo pidio el user.
+                self._set_update_state("failed" if manual else "idle")
+                if manual:
+                    self._set_status(self._t("upd.failed"))
+                return
+            if (rel and not rel["draft"] and not rel["prerelease"]
+                    and is_newer_version(rel["version"])):
+                self._upd_release = rel
+                self._set_update_state("available")
+                self._set_status(self._t("upd.toast", ver=rel["version"]))
+                self._show_toast(self._t("upd.toast", ver=rel["version"]),
+                                  kind="info", duration_ms=4000)
+            else:
+                self._set_update_state("uptodate")
+                if manual:
+                    self._set_status(self._t("upd.uptodate", ver=APP_VERSION))
+
+        def _install_update(self) -> None:
+            rel = getattr(self, "_upd_release", None)
+            if not rel: return
+            if update_asset_for_mode() is None:
+                # Corriendo desde el .py: no hay binario que reemplazar.
+                import webbrowser
+                try: webbrowser.open(rel["url"], new=2)
+                except Exception: pass
+                return
+            if self.is_recording():
+                self._set_status(self._t("upd.busy_rec"))
+                self._show_toast(self._t("upd.busy_rec"), kind="warning")
+                return
+            if not messagebox.askyesno(
+                    self._t("upd.confirm_title"),
+                    self._t("upd.confirm", ver=rel["version"]), parent=self):
+                return
+            self._upd_pct = ""
+            self._set_update_state("downloading")
+            def progress(done, total):
+                pct = f"{done * 100 // total}%" if total else f"{done // (1 << 20)} MB"
+                if pct != getattr(self, "_upd_pct", ""):
+                    self._upd_pct = pct
+                    self.after(0, self._render_update_label)
+            def worker():
+                try:
+                    work = update_work_dir()
+                    shutil.rmtree(work, ignore_errors=True)
+                    path = download_update(rel, work, progress)
+                    err = None
+                except Exception as e:
+                    path, err = None, e
+                self.after(0, lambda: self._on_update_downloaded(path, err))
+            threading.Thread(target=worker, daemon=True).start()
+
+        def _on_update_downloaded(self, path, err) -> None:
+            rel = self._upd_release
+            if err is None and self.is_recording():
+                # Empezo a grabar durante la descarga: no cortarle la sesion.
+                err = RuntimeError(self._t("upd.busy_rec"))
+            if err is None:
+                try: apply_update(path)
+                except Exception as e: err = e
+            if err is not None:
+                self._set_update_state("available")
+                self._set_status(self._t("upd.err", msg=err))
+                self._show_toast(self._t("upd.err", msg=err), kind="error",
+                                  duration_ms=4000)
+                return
+            self._set_status(self._t("upd.restarting", ver=rel["version"]))
+            self._on_close()
 
         def _set_status(self, msg: str) -> None:
             self.var_status.set(msg)
@@ -4332,6 +4785,7 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(
         description="Cliente para tarjeta capturadora. GUI por defecto.",
     )
+    parser.add_argument("--version", action="version", version=APP_VERSION)
     sub = parser.add_subparsers(dest="cmd")
     sub.add_parser("gui",        help="GUI (default).")
     sub.add_parser("console",    help="Menu de consola.")

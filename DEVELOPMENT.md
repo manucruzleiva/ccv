@@ -13,10 +13,12 @@ ccv/
 │   ├── icon.ico            # multi-res ICO embedded in ccv.exe
 │   └── README.md
 ├── bin/                    # ffmpeg/ffplay/ffprobe (gitignored, distributed via release)
+├── installer/
+│   └── ccv.iss             # Inno Setup script for ccv-setup.exe
 ├── .github/
 │   ├── FUNDING.yml
 │   └── workflows/
-│       └── release.yml     # CI: build .exe + publish to GitHub Releases on tag
+│       └── release.yml     # CI: build exe/zip/installer + publish to GitHub Releases on tag
 ├── CHANGELOG.md
 ├── CLAUDE.md               # rules for AI agents working in this repo
 ├── DEVELOPMENT.md          # ← you are here
@@ -100,6 +102,12 @@ python ccv.py build --onedir  # --onedir, instant startup, distribute the whole 
 
 The build picks up `bin/ffmpeg.exe`, `bin/ffplay.exe`, `bin/ffprobe.exe` and the contents of `assets/` and bakes them into the `.exe`. Output lands at `./ccv.exe`.
 
+To build the installer locally, install [Inno Setup 6](https://jrsoftware.org/isinfo.php), run `python ccv.py build --onedir` and then, from the repo root:
+
+```sh
+iscc /DAppVersion=0.8.0 installer\ccv.iss   # -> dist/ccv-setup.exe
+```
+
 If PyInstaller fails on the `update_exe_pe_checksum` step with `PermissionError`, that's Windows Defender real-time-scanning the freshly written `.exe`. Re-run the build; the second pass usually goes through.
 
 ## Releasing
@@ -114,7 +122,22 @@ Tagged releases are built and published automatically by [`.github/workflows/rel
    git tag v0.7.0
    git push origin v0.7.0
    ```
-5. Watch the **Release** workflow run on GitHub Actions. When it's green, the release is published with `ccv.exe` attached.
+5. Watch the **Release** workflow run on GitHub Actions. When it's green, the release is published with `ccv-setup.exe`, `ccv-portable.zip`, `ccv.exe` and `SHA256SUMS.txt` attached. The workflow refuses a tag that doesn't match `APP_VERSION`.
+
+Asset names are fixed (no version in them) and the in-app updater depends on them: renaming any of them, or dropping `SHA256SUMS.txt`, breaks auto-update for every installed copy. The installer's `AppId` in `installer/ccv.iss` must never change either, or upgrades stop finding the previous install.
+
+### Distribution modes and OTA updates
+
+`detect_install_mode()` decides how this copy was shipped, which decides what the updater downloads:
+
+| Mode | Detected by | Update asset | How it's applied |
+|---|---|---|---|
+| `installed` | `unins000.exe` next to the exe | `ccv-setup.exe` | run with `/SILENT` over the existing install |
+| `portable_dir` | `_internal/` next to the exe | `ccv-portable.zip` | unzip, swap `_internal/` (rolled back on failure), copy over |
+| `portable_exe` | neither | `ccv.exe` | replace the file |
+| `source` | not frozen | — | the link opens the Releases page |
+
+The flow is: `check_latest_release()` (GitHub API, background thread) → user clicks **Install** and confirms → `download_update()` (verifies SHA-256 against `SHA256SUMS.txt`) → `apply_update()` writes `%TEMP%\ccv-update\apply_update.ps1`, which waits for CCV to exit, applies the update, logs to `update.log` in the same folder and relaunches CCV (the old version if the update failed). Pre-releases and drafts are never offered.
 
 Manual release (workflow dispatch) is also available from the Actions tab if you need to rebuild without a new tag.
 
@@ -126,7 +149,7 @@ Manual release (workflow dispatch) is also available from the Actions tab if you
 
 ## Config
 
-User preferences live at `~/.ccv.json`. Anything that isn't immutable is persisted there: device choices, codec settings, theme, language, panel order, collapsed states, window geometry. The first launch migrates an older `~/.switch_capture.json` automatically.
+User preferences live at `~/.ccv.json` (or `ccv.json` next to the exe when a `ccv.portable` marker file sits beside it — the portable zip ships one). Anything that isn't immutable is persisted there: device choices, codec settings, theme, language, panel order, collapsed states, window geometry. The first launch migrates an older `~/.switch_capture.json` automatically.
 
 `save_config()` is debounced via `_save_cfg()` — call the latter inside event handlers, never the former directly.
 
