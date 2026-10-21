@@ -11,10 +11,29 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 - Installer (`ccv-setup.exe`, Inno Setup): per-user install into `%LOCALAPPDATA%\Programs\CCV` with Start-menu entry, optional desktop icon and a regular uninstaller. No admin rights / UAC prompt needed, so updates can run silently.
 - Portable zip (`ccv-portable.zip`): the fast-starting folder build plus a `ccv.portable` marker, which makes CCV store its settings in `ccv.json` next to `ccv.exe` instead of in the user profile (pendrive-friendly). On first run it copies over any existing `~/.ccv.json`.
 - `SHA256SUMS.txt` attached to every release, and `ccv --version` on the command line.
+- Main action card at the top of the sidebar: a status pill (Idle / Connecting / Live / REC mm:ss), the selected capture device, a large **Start preview** button and labeled **Screenshot** / **Record** buttons, so the open → select → play → capture flow reads without hovering tooltips.
+- Empty-state screen in the video area ("Connect your console") with a one-line hint and its own **Start preview** button, replacing the old grey placeholder sentence.
+- Toolbar icons use the native Windows icon font (Segoe Fluent Icons on Windows 11, Segoe MDL2 Assets on Windows 10), with a Unicode fallback when neither font is installed.
+- Small app logo next to the name in the sidebar header (`assets/logo-28.png`), and a larger one in the empty video area (`assets/logo-96.png`).
+- Simple mode: the sidebar shows only the basics (video and audio device, quality, volume) plus a short list of shortcuts. Everything else (preview and audio tweaks, screenshot and recording options, output folders, appearance, system and updates) lives under an **Advanced settings** toggle that remembers its state.
+- When advanced settings are hidden and diagnostics find a problem, a small warning chip next to the toggle shows how many issues there are and jumps straight to the diagnostics when clicked.
+- Accent color picker (**Advanced settings > Appearance**): violet, blue, cyan, green, orange or pink, applied live to both themes. A thin accent gradient strip at the top of the sidebar ties it together.
 
 ### Changed
 - Releases now ship four assets: `ccv-setup.exe`, `ccv-portable.zip`, the single-file `ccv.exe` (unchanged, still portable) and `SHA256SUMS.txt`. Asset names carry no version so `releases/latest/download/<name>` links stay stable.
 - The release workflow also runs (build only, no publish) on pull requests that touch packaging, fails a tag whose name doesn't match `APP_VERSION`, pins PyInstaller to 6.x and logs the bundled ffmpeg version and archive hash.
+- Visual overhaul: new graphite palette with a single violet accent for both themes, flatter buttons, accent-filled checkboxes and slider, slim arrowless scrollbar and themed combobox drop-downs.
+- Dark theme is now the default for new installs; existing users keep the theme saved in `~/.ccv.json`.
+- Sidebar sections now look like a settings list: thin divider, sentence-case title, and the reorder arrows only appear while hovering the section header.
+- Window controls (minimize / fullscreen / maximize / close) sit in a title row with the app name; mute, focus mode, panel side, language and theme moved to a compact toolbar under the action card.
+- Toasts, the volume overlay, tooltips and diagnostic cards were restyled: dark overlays with a colored side strip, a drawn volume bar instead of block characters, and `ⓘ` help icons instead of boxed `?` buttons.
+- Stop preview turns the main button neutral and recording turns the Record button solid red, so red is reserved for "you are recording". The REC dot in the status pill blinks while recording.
+- Moving the volume slider now changes the volume immediately while the preview is running, instead of only on the next start.
+- Toasts use friendlier, translated wording ("Got it!", "Clip saved") instead of hard-coded Spanish strings.
+
+### Fixed
+- The app icon (`icon.png`, `icon.ico`) now has a transparent background instead of a light grey square, so it looks right on the taskbar, desktop and dark backgrounds.
+- Switching theme from the GUI no longer stops halfway: the theme handler passed `bg=` to a ttk frame, which raised an error before the panel headers were recolored and before the choice was saved.
 
 ## [0.7.1] — 2026-05-03
 
