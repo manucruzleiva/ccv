@@ -4,6 +4,14 @@ on:
   push:
     tags:
       - 'v*'
+  # PRs that touch packaging get a full build (no publish) so a broken
+  # installer or zip is caught before a tag is pushed.
+  pull_request:
+    paths:
+      - 'ccv.py'
+      - 'requirements.txt'
+      - 'installer/**'
+      - '.github/workflows/release.yml'
   workflow_dispatch:
     inputs:
       tag:
@@ -28,11 +36,21 @@ jobs:
           python-version: '3.13'
           cache: pip
 
+      - name: Check tag matches APP_VERSION
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $ver = (python ccv.py --version).Trim()
+          if ("v$ver" -ne "${env:GITHUB_REF_NAME}") {
+            Write-Error "Tag ${env:GITHUB_REF_NAME} does not match APP_VERSION $ver in ccv.py"
+            exit 1
+          }
+
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller
+          pip install "pyinstaller>=6.11,<7"
 
       - name: Download ffmpeg / ffplay / ffprobe (BtbN GPL build)
         shell: pwsh
@@ -40,6 +58,7 @@ jobs:
           $url = 'https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip'
           $zip = Join-Path $env:RUNNER_TEMP 'ffmpeg.zip'
           Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+          Write-Output "ffmpeg zip sha256: $((Get-FileHash $zip -Algorithm SHA256).Hash)"
           Expand-Archive -Path $zip -DestinationPath $env:RUNNER_TEMP -Force
           $extracted = Get-ChildItem $env:RUNNER_TEMP -Directory | Where-Object Name -Like 'ffmpeg-*-win64-gpl' | Select-Object -First 1
           New-Item -ItemType Directory -Force -Path bin | Out-Null
@@ -47,16 +66,19 @@ jobs:
           Copy-Item -Force (Join-Path $extracted.FullName 'bin\ffplay.exe')  bin\
           Copy-Item -Force (Join-Path $extracted.FullName 'bin\ffprobe.exe') bin\
           Get-ChildItem bin\ | Format-Table Name, Length
+          & bin\ffmpeg.exe -hide_banner -version | Select-Object -First 1
 
-      - name: Build ccv.exe
+      - name: Build ccv.exe (single-file portable)
         run: python ccv.py build
+
+      - name: Build ccv/ folder (onedir, used by the zip and the installer)
+        run: python ccv.py build --onedir
 
       - name: Verify build output
         shell: pwsh
         run: |
-          if (-not (Test-Path 'ccv.exe')) {
-            Write-Error 'ccv.exe was not produced'
-            exit 1
+          foreach ($p in @('ccv.exe', 'ccv\ccv.exe', 'ccv\_internal')) {
+            if (-not (Test-Path $p)) { Write-Error "$p was not produced"; exit 1 }
           }
           $sizeMB = [math]::Round((Get-Item ccv.exe).Length / 1MB, 1)
           Write-Output "ccv.exe size: $sizeMB MB"
@@ -64,12 +86,57 @@ jobs:
             Write-Error "ccv.exe is suspiciously small ($sizeMB MB) — bundled ffmpeg likely missing"
             exit 1
           }
+          if (-not (Get-ChildItem ccv\_internal -Recurse -Filter ffplay.exe)) {
+            Write-Error 'ffplay.exe missing from the onedir build'
+            exit 1
+          }
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup --no-progress -y
+          }
+          if (-not (Test-Path $iscc)) { Write-Error 'ISCC.exe not found after install'; exit 1 }
+          "ISCC=$iscc" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Package portable zip, installer and checksums
+        shell: pwsh
+        run: |
+          $ver = (python ccv.py --version).Trim()
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+
+          # Portable zip: the onedir folder + the marker that keeps the
+          # config next to the exe instead of in the user's profile.
+          $stage = Join-Path $env:RUNNER_TEMP 'portable'
+          Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
+          Copy-Item -Recurse ccv $stage
+          Set-Content -Path (Join-Path $stage 'ccv.portable') -Encoding ascii -Value @(
+            'This file makes CCV run in portable mode: settings are stored in ccv.json',
+            'next to ccv.exe instead of in your user profile. Delete it to use the profile.'
+          )
+          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath dist\ccv-portable.zip -CompressionLevel Optimal
+
+          Copy-Item ccv.exe dist\ccv.exe
+
+          & $env:ISCC "/DAppVersion=$ver" "/DSourceDir=$PWD\ccv" "/DOutputDir=$PWD\dist" installer\ccv.iss
+          if ($LASTEXITCODE -ne 0) { Write-Error 'ISCC failed'; exit 1 }
+
+          # sha256sum-compatible manifest; the in-app updater refuses any
+          # download whose hash doesn't match this file.
+          $lines = Get-ChildItem dist -File | Sort-Object Name | ForEach-Object {
+            "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
+          }
+          [IO.File]::WriteAllText("$PWD\dist\SHA256SUMS.txt", (($lines -join "`n") + "`n"))
+          Get-Content dist\SHA256SUMS.txt
+          Get-ChildItem dist | Format-Table Name, @{n='MB'; e={[math]::Round($_.Length / 1MB, 1)}}
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ccv-exe
-          path: ccv.exe
+          name: ccv-dist
+          path: dist/*
           retention-days: 14
 
   publish:
@@ -85,7 +152,8 @@ jobs:
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
-          name: ccv-exe
+          name: ccv-dist
+          path: dist
 
       - name: Extract release notes from CHANGELOG
         shell: bash
@@ -115,7 +183,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag="${GITHUB_REF_NAME}"
-          gh release create "$tag" ccv.exe \
+          gh release create "$tag" dist/* \
             --repo "${{ github.repository }}" \
             --title "CCV $tag" \
             --notes-file release-notes.md
