@@ -40,6 +40,7 @@ Requires Windows 10 or 11 (64-bit). Checksums for every file are in `SHA256SUMS.
 - **Focus mode** — double-click the video and the sidebar slides away so the gameplay fills the window.
 - **Live volume / mute** — scroll wheel over the video to change volume, middle-click to mute.
 - **Dark or light** — dark by default; flip it from the sun/moon button in the sidebar toolbar, switches instantly.
+- **Simple by default** — the sidebar shows only device, quality and volume; codecs, folders, accent color, diagnostics and updates sit under **Advanced settings**.
 - **English / Español** — pick your language, also live.
 - **Remembers everything** — your panel layout, window size, and settings survive across sessions.
 

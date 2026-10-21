@@ -128,6 +128,7 @@ def _resolve_asset(rel: str) -> Path | None:
 ICON_ICO = _resolve_asset("icon.ico")
 ICON_PNG = _resolve_asset("icon.png")
 LOGO_PNG = _resolve_asset("logo-28.png")   # marca chica del header
+LOGO_BIG_PNG = _resolve_asset("logo-96.png")  # estado vacio del video
 
 
 # --------------------------------------------------------------------------- #
@@ -207,7 +208,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "lbl.fmt_unsupported": "(no soportado)",
         "lbl.fmt_picker_tip": "Elige resolucion + FPS soportado por tu capturadora.\nLa lista se filtra al hardware detectado.",
         "lbl.video_placeholder": "Conecta tu consola",
-        "lbl.video_hint":    "Elige tu capturadora en Dispositivos y pulsa Iniciar vista previa.",
+        "lbl.video_hint":    "Elige tu capturadora en el panel lateral y pulsa Iniciar vista previa.",
+        "lbl.tips":          "PrintScreen  captura\nF11  pantalla completa\nDoble click en el video  modo focus\nRueda del mouse  volumen  ·  Click rueda  silenciar",
         "lbl.no_device":     "Ningun dispositivo de video elegido",
         # botones principales
         "btn.preview_start": "Iniciar vista previa",
@@ -220,6 +222,12 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "pill.starting":     "Conectando...",
         "pill.live":         "En vivo",
         "pill.rec":          "REC {time}",
+        "btn.advanced":      "Ajustes avanzados",
+        "sec.appearance":    "Apariencia",
+        "lbl.quality":       "Calidad",
+        "lbl.accent":        "Color de acento",
+        "chip.issues":       "⚠ {n} aviso(s)",
+        "tt.chip":           "Hay algo que revisar. Click para ver el diagnostico.",
         # status
         "st.ready":             "Listo",
         "st.preview_active":    "Vista previa activa",
@@ -230,11 +238,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "st.recording_saving":  "Deteniendo grabacion (finalizando archivo)...",
         "st.recording_saved":   "Grabacion guardada · {msg}",
         # toasts
-        "toast.shot_file":      "📷 Captura guardada · {name}",
-        "toast.shot_clip":      "📷 Captura al portapapeles",
-        "toast.rec_started":    "⏺ Grabacion iniciada · {name}",
+        "toast.shot_file":      "📷 ¡Capturado! · {name}",
+        "toast.shot_clip":      "📷 ¡Capturado! Listo para pegar",
+        "toast.rec_started":    "⏺ Grabando · {name}",
         "toast.rec_finalizing": "⏹ Finalizando grabacion...",
-        "toast.rec_saved":      "✓ Grabacion guardada · {msg}",
+        "toast.rec_saved":      "✓ Clip guardado · {msg}",
         "toast.rec_no_file":    "⚠ Grabacion sin archivo",
     },
     "en": {
@@ -299,7 +307,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "lbl.fmt_unsupported": "(unsupported)",
         "lbl.fmt_picker_tip": "Pick a resolution + FPS supported by your capture card.\nThe list is filtered to the detected hardware.",
         "lbl.video_placeholder": "Connect your console",
-        "lbl.video_hint":    "Pick your capture card under Devices and press Start preview.",
+        "lbl.video_hint":    "Pick your capture card in the side panel and press Start preview.",
+        "lbl.tips":          "PrintScreen  screenshot\nF11  fullscreen\nDouble-click the video  focus mode\nMouse wheel  volume  ·  Middle-click  mute",
         "lbl.no_device":     "No video device selected",
         "btn.preview_start": "Start preview",
         "btn.preview_stop":  "Stop preview",
@@ -310,6 +319,12 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "pill.starting":     "Connecting...",
         "pill.live":         "Live",
         "pill.rec":          "REC {time}",
+        "btn.advanced":      "Advanced settings",
+        "sec.appearance":    "Appearance",
+        "lbl.quality":       "Quality",
+        "lbl.accent":        "Accent color",
+        "chip.issues":       "⚠ {n} issue(s)",
+        "tt.chip":           "Something needs a look. Click to open diagnostics.",
         "st.ready":             "Ready",
         "st.preview_active":    "Preview active",
         "st.preview_starting":  "Starting preview...",
@@ -318,11 +333,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "st.recording_to":      "Recording → {name}",
         "st.recording_saving":  "Stopping recording (finalizing file)...",
         "st.recording_saved":   "Recording saved · {msg}",
-        "toast.shot_file":      "📷 Screenshot saved · {name}",
-        "toast.shot_clip":      "📷 Screenshot to clipboard",
-        "toast.rec_started":    "⏺ Recording started · {name}",
+        "toast.shot_file":      "📷 Got it! · {name}",
+        "toast.shot_clip":      "📷 Got it! Ready to paste",
+        "toast.rec_started":    "⏺ Recording · {name}",
         "toast.rec_finalizing": "⏹ Finalizing recording...",
-        "toast.rec_saved":      "✓ Recording saved · {msg}",
+        "toast.rec_saved":      "✓ Clip saved · {msg}",
         "toast.rec_no_file":    "⚠ Recording produced no file",
     },
 }
@@ -831,6 +846,8 @@ DEFAULTS: dict = {
     "audio_passthrough_during_record": True,
     "shortcut_offered": False,            # ya preguntamos por crear acceso directo
     "theme": "dark",                      # light | dark
+    "accent": "violet",                   # ver ACCENTS en run_gui
+    "show_advanced": False,               # sidebar: solo lo basico por defecto
     "muted": False,
     "language": "es",                     # ISO 639-1: es | en | ...
     "sidebar_side": "right",              # right | left
@@ -2169,9 +2186,42 @@ def run_gui(cfg: dict) -> None:
         "TIP_BG":      "#22262e", "TIP_FG":      "#e8eaef",
         "TIP_BORDER":  "#363b47",
     }
+    # Colores de acento elegibles (Ajustes avanzados > Apariencia). Por tema:
+    # (ACCENT, ACCENT_HOV, ACCENT_BG, ACCENT_FG). ACCENT2 es el segundo tono
+    # de la franja degradada del header. El rojo queda fuera: es de REC.
+    ACCENTS = {
+        "violet": {"dark":  ("#7c6cff", "#9486ff", "#24204a", "#ffffff"),
+                   "light": ("#5b4cf0", "#4a3bd9", "#eeecfe", "#ffffff"),
+                   "ACCENT2": "#f05ba8"},
+        "blue":   {"dark":  ("#4c8dff", "#6ea3ff", "#132443", "#ffffff"),
+                   "light": ("#2563eb", "#1d4ed8", "#eaf1fe", "#ffffff"),
+                   "ACCENT2": "#22c3e6"},
+        "cyan":   {"dark":  ("#22c3e6", "#4dd4f0", "#0f2f38", "#0b0c0f"),
+                   "light": ("#0891b2", "#0e7490", "#e6f7fb", "#ffffff"),
+                   "ACCENT2": "#7c6cff"},
+        "green":  {"dark":  ("#3ecf8e", "#5fe0a6", "#102c20", "#0b0c0f"),
+                   "light": ("#16a34a", "#15803d", "#e9f9ef", "#ffffff"),
+                   "ACCENT2": "#22c3e6"},
+        "orange": {"dark":  ("#ff8a3d", "#ffa162", "#33200f", "#0b0c0f"),
+                   "light": ("#ea6a12", "#c2570c", "#fff1e6", "#ffffff"),
+                   "ACCENT2": "#f05ba8"},
+        "pink":   {"dark":  ("#f05ba8", "#f57dbb", "#361527", "#ffffff"),
+                   "light": ("#db2777", "#be185d", "#fdeef5", "#ffffff"),
+                   "ACCENT2": "#ff8a3d"},
+    }
+
+    def _palette_for(theme: str, accent: str) -> dict:
+        base = dict(DARK_PALETTE if theme == "dark" else LIGHT_PALETTE)
+        preset = ACCENTS.get(accent) or ACCENTS["violet"]
+        a, hov, abg, afg = preset[theme]
+        base.update({"ACCENT": a, "ACCENT_HOV": hov, "ACCENT_BG": abg,
+                     "ACCENT_FG": afg, "SEL_BG": a,
+                     "ACCENT2": preset["ACCENT2"]})
+        return base
+
     THEME_NAME = (cfg.get("theme") or "dark").lower()
     if THEME_NAME not in ("light", "dark"): THEME_NAME = "dark"
-    P = DARK_PALETTE if THEME_NAME == "dark" else LIGHT_PALETTE
+    P = _palette_for(THEME_NAME, cfg.get("accent") or "violet")
     BG          = P["BG"]
     BG_DEEP     = P["BG_DEEP"]
     CARD        = P["CARD"]
@@ -2245,6 +2295,12 @@ def run_gui(cfg: dict) -> None:
                 "side": "\u21c6", "lang": "\U0001f310",
                 "moon": "\u263e", "sun": "\u2600",
             })
+
+    def _mix(c1: str, c2: str, t: float) -> str:
+        """Interpola dos colores #rrggbb (t=0 -> c1, t=1 -> c2)."""
+        a = [int(c1[i:i + 2], 16) for i in (1, 3, 5)]
+        b = [int(c2[i:i + 2], 16) for i in (1, 3, 5)]
+        return "#" + "".join(f"{round(x + (y - x) * t):02x}" for x, y in zip(a, b))
 
     def _sev_colors() -> dict[str, tuple[str, str]]:
         return {
@@ -2628,6 +2684,16 @@ def run_gui(cfg: dict) -> None:
                         font=FONT_SUB)
             s.configure("Section.TLabel", background=BG, foreground=ACCENT,
                         font=FONT_SECTION)
+            # Boton "Ajustes avanzados": texto plano que se acentua al hover
+            s.configure("Link.TButton", padding=(6, 6), font=FONT_BTN,
+                        background=BG, foreground=SUB, bordercolor=BG,
+                        lightcolor=BG, darkcolor=BG, relief="flat",
+                        borderwidth=0, anchor="w")
+            s.map("Link.TButton",
+                   background=[("active", BG), ("pressed", BG)],
+                   foreground=[("active", ACCENT)],
+                   bordercolor=[("active", BG)],
+                   lightcolor=[("active", BG)], darkcolor=[("active", BG)])
             s.configure("Sub.TLabel", background=BG, foreground=SUB,
                         font=FONT_SUB)
             s.configure("Mono.TLabel", background=BG, foreground=SUB,
@@ -2647,7 +2713,8 @@ def run_gui(cfg: dict) -> None:
             for name, bg, fg in (("Idle", HOVER_BG, SUB),
                                   ("Wait", WARN_BG, WARN_FG),
                                   ("Live", OK_BG, OK_FG),
-                                  ("Rec", ERR_BG, ERR_FG)):
+                                  ("Rec", ERR_BG, ERR_FG),
+                                  ("RecDim", ERR_BG, _mix(ERR_FG, ERR_BG, 0.6))):
                 s.configure(f"Pill{name}.TLabel", background=bg,
                             foreground=fg, font=FONT_PILL, padding=(9, 3))
 
@@ -3577,13 +3644,24 @@ def run_gui(cfg: dict) -> None:
             # Construir contenido de la sidebar
             self._target = sidebar_inner
             self._build_sidebar_header()  # logo + quick controls + acciones
+            # Lo basico (siempre visible): dispositivos, calidad y volumen.
+            self._basics = ttk.Frame(self._target, padding=(14, 2, 14, 4))
+            self._basics.pack(fill="x")
+            self._basics.grid_columnconfigure(1, weight=1)
             self._build_devices()
             self._build_format_matrix()
+            self._add_volume(self._basics, 4)
+            self._build_advanced_toggle()
+            # Ajustes avanzados: paneles colapsables, ocultos por defecto.
+            self._adv_container = ttk.Frame(self._target)
+            self._target = self._adv_container
             self._build_preview_audio()
             self._build_capture()
             self._build_recording()
             self._build_folders()  # destinos de salida (capturas + videos)
+            self._build_appearance()
             self._build_system()  # status + diagnostico + sistema integrados
+            self._apply_advanced_visibility()
             # Restaurar target para evitar bugs
             self._target = self
 
@@ -3613,7 +3691,7 @@ def run_gui(cfg: dict) -> None:
             nonlocal HEADER_BG, HEADER_BORDER
 
             THEME_NAME = name
-            P = DARK_PALETTE if name == "dark" else LIGHT_PALETTE
+            P = _palette_for(name, self.cfg.get("accent") or "violet")
             BG, BG_DEEP, CARD = P["BG"], P["BG_DEEP"], P["CARD"]
             BORDER, BORDER_HARD = P["BORDER"], P["BORDER_HARD"]
             TEXT, SUB, MUTED = P["TEXT"], P["SUB"], P["MUTED"]
@@ -3660,6 +3738,8 @@ def run_gui(cfg: dict) -> None:
                 try: self.upd_label.configure(bg=BG, fg=ACCENT)
                 except Exception: pass
 
+            self._paint_brand_strip()
+            self._paint_swatches()
             # Re-render contenido dinamico
             self._refresh_diagnostics()
             self._render_format_matrix()
@@ -3848,6 +3928,8 @@ def run_gui(cfg: dict) -> None:
             # Botones con texto (Iniciar / Captura / Grabar) + pastilla
             try: self._update_buttons()
             except Exception: pass
+            try: self._apply_advanced_visibility()
+            except Exception: pass
 
         # ===== Layout helper =====
         def _layout_main(self) -> None:
@@ -3884,8 +3966,14 @@ def run_gui(cfg: dict) -> None:
             # siguiente paso (elegir dispositivo / iniciar) va escrito.
             vbg = P["VIDEO_BG"]
             self.video_placeholder = tk.Frame(self.video_holder, bg=vbg)
-            self._ph_glyph = tk.Label(self.video_placeholder, text="▶",
-                                       bg=vbg, font=FONT_PH_GLYPH)
+            self._ph_logo = None
+            if LOGO_BIG_PNG is not None:
+                try: self._ph_logo = tk.PhotoImage(file=str(LOGO_BIG_PNG))
+                except Exception: self._ph_logo = None
+            self._ph_glyph = tk.Label(self.video_placeholder, bg=vbg,
+                                       image=self._ph_logo or "",
+                                       text="" if self._ph_logo else "▶",
+                                       font=FONT_PH_GLYPH)
             self._ph_glyph.pack()
             self._ph_title = tk.Label(self.video_placeholder, bg=vbg,
                                        font=FONT_PH_TITLE)
@@ -4033,6 +4121,12 @@ def run_gui(cfg: dict) -> None:
         # ===== Acciones =====
         # ===== Sidebar header: logo + quick controls + acciones =====
         def _build_sidebar_header(self) -> None:
+            # Franja degradada del acento: la "firma" visual de CCV.
+            self._brand_strip = tk.Canvas(self._target, height=3, bd=0,
+                                           highlightthickness=0, bg=P["BG"])
+            self._brand_strip.pack(fill="x")
+            self._brand_strip.bind("<Configure>",
+                                    lambda e: self._paint_brand_strip())
             f = ttk.Frame(self._target, padding=(14, 10, 10, 10))
             f.pack(fill="x")
 
@@ -4133,6 +4227,18 @@ def run_gui(cfg: dict) -> None:
             self._title_label = f  # compat: drag handle
             self._update_buttons()
 
+        def _paint_brand_strip(self) -> None:
+            cv = getattr(self, "_brand_strip", None)
+            if cv is None: return
+            cv.delete("all")
+            w = max(1, cv.winfo_width())
+            steps = 48
+            for i in range(steps):
+                x0 = w * i // steps; x1 = w * (i + 1) // steps + 1
+                cv.create_rectangle(
+                    x0, 0, x1, 3, outline="",
+                    fill=_mix(P["ACCENT"], P["ACCENT2"], i / (steps - 1)))
+
         # _build_actions removido: ahora vive como header de la sidebar.
 
         # ===== Diagnostico (ya no es panel propio; vive en Sistema) =====
@@ -4140,6 +4246,10 @@ def run_gui(cfg: dict) -> None:
             pass
 
         def _render_diagnostics(self, items: list[dict]) -> None:
+            sevs = [it.get("severity") for it in items]
+            self._diag_issues = (sum(1 for x in sevs if x in ("error", "warn")),
+                                  "error" in sevs)
+            self._refresh_diag_chip()
             for w in self.diag_inner.winfo_children():
                 w.destroy()
             # Calcular wraplength dinamico segun ancho del panel
@@ -4210,7 +4320,7 @@ def run_gui(cfg: dict) -> None:
 
         # ===== Dispositivos =====
         def _build_devices(self) -> None:
-            f = self._make_section("Dispositivos", key="sec.devices")
+            f = self._basics
             # No bloqueamos el build con la enumeracion DirectShow (~1-2s).
             # Pre-poblamos los combos solo con el valor actual del cfg para
             # que se pinten al instante; un thread llena la lista completa
@@ -4226,7 +4336,6 @@ def run_gui(cfg: dict) -> None:
                              special_none="(sin audio)",
                              label_key="lbl.audio",
                              help_key=None, on_change_extra=self._refresh_diagnostics); r += 1
-            f.grid_columnconfigure(1, weight=1)
             # Cargar la lista real en background
             def _load():
                 try: v, a = list_dshow_devices()
@@ -4247,18 +4356,18 @@ def run_gui(cfg: dict) -> None:
 
         # ===== Calidad (resolucion + FPS compacto) =====
         def _build_format_matrix(self) -> None:
-            self.fmt_frame = self._make_section("Calidad", key="sec.quality")
-            self.fmt_status = ttk.Label(self.fmt_frame, text="",
-                                         style="Sub.TLabel",
-                                         wraplength=320, justify="left")
-            self.fmt_status.pack(anchor="w", pady=(0, 6))
-
+            f = self.fmt_frame = self._basics
+            self._make_label(f, "Calidad", "lbl.quality", row=2)
             # Combobox compacto con todas las combinaciones soportadas
             self.fmt_combo_var = tk.StringVar()
             self.fmt_combo = ttk.Combobox(
-                self.fmt_frame, textvariable=self.fmt_combo_var,
+                f, textvariable=self.fmt_combo_var,
                 state="readonly", width=24)
-            self.fmt_combo.pack(fill="x")
+            self.fmt_combo.grid(row=2, column=1, sticky="we", padx=4, pady=3)
+            # Linea de estado: solo aparece mientras se consultan formatos
+            self._fmt_loading = False
+            self.fmt_status = ttk.Label(f, text="", style="Sub.TLabel")
+            self.fmt_status.grid(row=3, column=1, sticky="w", padx=4)
             self.fmt_combo.bind(
                 "<<ComboboxSelected>>", self._on_format_combo)
             self._tt_track(self.fmt_combo, "lbl.fmt_picker_tip")
@@ -4267,12 +4376,11 @@ def run_gui(cfg: dict) -> None:
         def _render_format_matrix(self) -> None:
             cur_res = self.cfg.get("resolution", "")
             cur_fps = int(self.cfg.get("framerate", 60))
-            device = self.cfg.get("video_device") or "—"
-            self.fmt_status.config(
-                text=(self._t("lbl.fmt_active", res=cur_res, fps=cur_fps)
-                      + "\n"
-                      + self._t("lbl.fmt_hardware", dev=device))
-            )
+            if self._fmt_loading:
+                self.fmt_status.config(text=self._t("lbl.fmt_loading"))
+                self.fmt_status.grid()
+            else:
+                self.fmt_status.grid_remove()
             options: list[str] = []
             if self._formats:
                 def area(r: str) -> int:
@@ -4318,7 +4426,7 @@ def run_gui(cfg: dict) -> None:
             # Re-consultar formatos en hilo aparte
             device = self.cfg.get("video_device")
             self._refresh_status_pill()
-            self.fmt_status.config(text=self._t("lbl.fmt_loading"))
+            self._fmt_loading = bool(device)
             self._formats = {}
             self._render_format_matrix()
             self._refresh_diagnostics()
@@ -4329,9 +4437,109 @@ def run_gui(cfg: dict) -> None:
             threading.Thread(target=worker, daemon=True).start()
 
         def _on_formats_loaded(self, fmts: dict[str, float]) -> None:
+            self._fmt_loading = False
             self._formats = fmts
             self._render_format_matrix()
             self._refresh_diagnostics()
+
+        # ===== Ajustes avanzados (toggle + aviso de diagnostico) =====
+        def _build_advanced_toggle(self) -> None:
+            bar = ttk.Frame(self._target, padding=(8, 0, 14, 6))
+            bar.pack(fill="x")
+            self.btn_adv = ttk.Button(bar, style="Link.TButton",
+                                       command=self._toggle_advanced)
+            self.btn_adv.pack(side="left")
+            # Pastilla que avisa de problemas de diagnostico cuando los
+            # avanzados estan ocultos: un usuario nuevo no se los pierde.
+            self.diag_chip = ttk.Label(bar, style="PillWait.TLabel",
+                                        cursor="hand2")
+            self.diag_chip.bind("<Button-1>",
+                                 lambda e: (self._open_diagnostics(), "break")[1])
+            self._tt_track(self.diag_chip, "tt.chip")
+            self._diag_issues = (0, False)
+            # Atajos: ocupan el espacio libre cuando los avanzados estan
+            # ocultos y ensenan los gestos que no tienen boton.
+            self._tips = ttk.Frame(self._target, padding=(16, 4, 14, 10))
+            self._tips_lbl = ttk.Label(self._tips, style="Sub.TLabel",
+                                        justify="left")
+            self._tips_lbl.pack(anchor="w")
+
+        def _toggle_advanced(self) -> None:
+            self.cfg["show_advanced"] = not self.cfg.get("show_advanced", False)
+            self._save_cfg()
+            self._apply_advanced_visibility()
+
+        def _apply_advanced_visibility(self) -> None:
+            show = bool(self.cfg.get("show_advanced", False))
+            if show:
+                self._tips.pack_forget()
+                self._adv_container.pack(fill="x")
+            else:
+                self._adv_container.pack_forget()
+                self._tips_lbl.configure(text=self._t("lbl.tips"))
+                self._tips.pack(fill="x", after=self.btn_adv.master)
+            arrow = "▾" if show else "▸"
+            self.btn_adv.configure(text=f"⚙  {self._t('btn.advanced')}  {arrow}")
+            self._refresh_diag_chip()
+            self.after(30, lambda: self._sidebar_canvas.configure(
+                scrollregion=self._sidebar_canvas.bbox("all")))
+
+        def _refresh_diag_chip(self) -> None:
+            if not hasattr(self, "diag_chip"): return
+            n, has_err = self._diag_issues
+            if n and not self.cfg.get("show_advanced", False):
+                self.diag_chip.configure(
+                    text=self._t("chip.issues", n=n),
+                    style="PillRec.TLabel" if has_err else "PillWait.TLabel")
+                self.diag_chip.pack(side="right")
+            else:
+                self.diag_chip.pack_forget()
+
+        def _open_diagnostics(self) -> None:
+            """Abre los avanzados, expande Sistema y scrollea hasta el."""
+            if not self.cfg.get("show_advanced", False):
+                self._toggle_advanced()
+            for panel in self._panels:
+                if panel.section_key == "sec.system" and not panel.expanded:
+                    panel.toggle()
+            def _scroll():
+                self.update_idletasks()
+                self._sidebar_canvas.configure(
+                    scrollregion=self._sidebar_canvas.bbox("all"))
+                self._sidebar_canvas.yview_moveto(1.0)
+            self.after(60, _scroll)
+
+        # ===== Apariencia (color de acento) =====
+        def _build_appearance(self) -> None:
+            f = self._make_section("Apariencia", key="sec.appearance")
+            self._make_label(f, "Color de acento", "lbl.accent", row=0)
+            row = ttk.Frame(f)
+            row.grid(row=0, column=1, sticky="w", padx=4, pady=6)
+            self._swatches: dict[str, tk.Frame] = {}
+            for key in ACCENTS:
+                color = ACCENTS[key][THEME_NAME][0]
+                sw = tk.Frame(row, width=22, height=22, bg=color,
+                               cursor="hand2", highlightthickness=2)
+                sw.pack(side="left", padx=(0, 8))
+                sw.bind("<Button-1>",
+                         lambda e, k=key: (self._set_accent(k), "break")[1])
+                self._swatches[key] = sw
+            self._paint_swatches()
+
+        def _paint_swatches(self) -> None:
+            cur = self.cfg.get("accent") or "violet"
+            for key, sw in getattr(self, "_swatches", {}).items():
+                try:
+                    sw.configure(
+                        bg=ACCENTS[key][THEME_NAME][0],
+                        highlightbackground=P["TEXT"] if key == cur else P["BG"],
+                        highlightcolor=P["TEXT"] if key == cur else P["BG"])
+                except Exception: pass
+
+        def _set_accent(self, key: str) -> None:
+            if key == self.cfg.get("accent"): return
+            self.cfg["accent"] = key
+            self._apply_theme(THEME_NAME)
 
         # ===== Preview & audio =====
         def _build_preview_audio(self) -> None:
@@ -4340,7 +4548,6 @@ def run_gui(cfg: dict) -> None:
             self._add_check(f, r, "Always on top",
                              "always_on_top",
                              label_key="lbl.always_on_top"); r += 1
-            self._add_volume(f, r); r += 1
             self._add_combo(f, r, "Buffer audio (ms)", "audio_buffer_size_ms",
                              ["0", "40", "60", "80", "120", "200"],
                              label_key="lbl.audio_buffer",
@@ -4625,7 +4832,7 @@ def run_gui(cfg: dict) -> None:
             sub = ttk.Frame(parent)
             sub.grid(row=r, column=1, sticky="we", padx=4, pady=3)
             self.var_vol = tk.IntVar(value=int(self.cfg.get("volume", 80)))
-            self.var_vol_lbl = tk.StringVar(value=str(self.var_vol.get()))
+            self.var_vol_lbl = tk.StringVar(value=f"{self.var_vol.get()}%")
             ttk.Scale(sub, from_=0, to=100, orient="horizontal",
                       variable=self.var_vol).pack(side="left",
                                                     fill="x", expand=True)
@@ -4633,9 +4840,13 @@ def run_gui(cfg: dict) -> None:
                       ).pack(side="left", padx=(6, 0))
             def on_change(*_):
                 v = int(self.var_vol.get())
-                self.var_vol_lbl.set(str(v))
+                self.var_vol_lbl.set(f"{v}%")
                 self.cfg["volume"] = v
                 self._save_cfg()
+                # Con la vista previa activa, aplicar al instante
+                if self._embedded_hwnd and not self.cfg.get("muted"):
+                    try: self._set_ffplay_volume_live(v)
+                    except Exception: pass
             self.var_vol.trace_add("write", on_change)
             self._vars["volume"] = self.var_vol
             self._add_help_button(parent, r, "volume")
@@ -4894,7 +5105,10 @@ def run_gui(cfg: dict) -> None:
             que el contador REC avance)."""
             if not hasattr(self, "status_pill"): return
             if self.is_recording():
-                style, text = "PillRec.TLabel", self._t(
+                # El punto "late" con cada tick de _poll (500 ms)
+                self._rec_blink = not getattr(self, "_rec_blink", False)
+                style = "PillRecDim.TLabel" if self._rec_blink else "PillRec.TLabel"
+                text = self._t(
                     "pill.rec", time=self.var_timer.get().replace("REC", "").strip()
                     or "00:00")
             elif self.is_running() and self._embedded_hwnd:
@@ -4981,11 +5195,11 @@ def run_gui(cfg: dict) -> None:
                     self._set_status(msg)
                     if path:
                         self._show_toast(
-                            f"📷 Captura guardada · {path.name}",
+                            self._t("toast.shot_file", name=path.name),
                             kind="success")
                     else:
                         self._show_toast(
-                            "📷 Captura al portapapeles",
+                            self._t("toast.shot_clip"),
                             kind="info")
                 self.after(0, done)
             threading.Thread(target=worker, daemon=True).start()
@@ -5013,12 +5227,12 @@ def run_gui(cfg: dict) -> None:
                 if out:
                     self._set_status(f"Grabando → {out.name}")
                     self._show_toast(
-                        f"⏺ Grabacion iniciada · {out.name}",
+                        self._t("toast.rec_started", name=out.name),
                         kind="rec", duration_ms=2000)
                 else:
                     self._set_status("Grabando")
                     self._show_toast(
-                        "⏺ Grabacion iniciada",
+                        self._t("toast.rec_started", name="").rstrip(" ·"),
                         kind="rec", duration_ms=2000)
             else:
                 # Detener grabacion: feedback inmediato + EOF al recorder.
@@ -5038,7 +5252,7 @@ def run_gui(cfg: dict) -> None:
                             self._set_status(
                                 f"Grabacion guardada · {msg}")
                             self._show_toast(
-                                f"✓ Grabacion guardada · {msg}",
+                                self._t("toast.rec_saved", msg=msg),
                                 kind="success", duration_ms=2500)
                         else:
                             self._set_status("Vista previa activa")
