@@ -21,6 +21,7 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 
 ### Changed
 - Releases now ship four assets: `ccv-setup.exe`, `ccv-portable.zip`, the single-file `ccv.exe` (unchanged, still portable) and `SHA256SUMS.txt`. Asset names carry no version so `releases/latest/download/<name>` links stay stable.
+- A release can now be cut from the Actions tab without pushing a tag: running the **Release** workflow on `main` with **publish** checked tags the commit as `v<APP_VERSION>` and publishes it (it refuses if that tag already exists). Pushing a `v*` tag still works as before.
 - The release workflow also runs (build only, no publish) on pull requests that touch packaging, fails a tag whose name doesn't match `APP_VERSION`, pins PyInstaller to 6.x and logs the bundled ffmpeg version and archive hash.
 - Visual overhaul: new graphite palette with a single violet accent for both themes, flatter buttons, accent-filled checkboxes and slider, slim arrowless scrollbar and themed combobox drop-downs.
 - Dark theme is now the default for new installs; existing users keep the theme saved in `~/.ccv.json`.

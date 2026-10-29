@@ -12,11 +12,15 @@ on:
       - 'requirements.txt'
       - 'installer/**'
       - '.github/workflows/release.yml'
+  # Manual run from the Actions tab (or the API). With publish=true on
+  # main it tags the commit as v<APP_VERSION> and publishes the release,
+  # so cutting a release doesn't need anyone to push a tag by hand.
   workflow_dispatch:
     inputs:
-      tag:
-        description: 'Tag name (e.g. v0.6.0). Leave blank to build without publishing.'
-        required: false
+      publish:
+        description: 'Tag main as v<APP_VERSION> and publish the release (off = build only)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -25,6 +29,9 @@ jobs:
   build:
     runs-on: windows-latest
     timeout-minutes: 30
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      publish: ${{ steps.release.outputs.publish }}
 
     steps:
       - name: Checkout
@@ -36,15 +43,36 @@ jobs:
           python-version: '3.13'
           cache: pip
 
-      - name: Check tag matches APP_VERSION
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Resolve release tag
+        id: release
         shell: pwsh
+        env:
+          PUBLISH_INPUT: ${{ inputs.publish }}
         run: |
           $ver = (python ccv.py --version).Trim()
-          if ("v$ver" -ne "${env:GITHUB_REF_NAME}") {
-            Write-Error "Tag ${env:GITHUB_REF_NAME} does not match APP_VERSION $ver in ccv.py"
-            exit 1
+          if ($ver -notmatch '^\d+\.\d+\.\d+$') { Write-Error "Unexpected APP_VERSION '$ver'"; exit 1 }
+          $tag = "v$ver"
+          $publish = 'false'
+          if ($env:GITHUB_REF -like 'refs/tags/v*') {
+            if ($tag -ne $env:GITHUB_REF_NAME) {
+              Write-Error "Tag $($env:GITHUB_REF_NAME) does not match APP_VERSION $ver in ccv.py"
+              exit 1
+            }
+            $publish = 'true'
+          } elseif ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch' -and $env:PUBLISH_INPUT -eq 'true') {
+            if ($env:GITHUB_REF -ne 'refs/heads/main') {
+              Write-Error "Publishing is only allowed from main (got $($env:GITHUB_REF))"
+              exit 1
+            }
+            if (git ls-remote --tags origin "refs/tags/$tag") {
+              Write-Error "$tag already exists: bump APP_VERSION before publishing again"
+              exit 1
+            }
+            $publish = 'true'
           }
+          Write-Output "tag=$tag publish=$publish"
+          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "publish=$publish" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - name: Install Python dependencies
         run: |
@@ -141,7 +169,7 @@ jobs:
 
   publish:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: needs.build.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -157,8 +185,10 @@ jobs:
 
       - name: Extract release notes from CHANGELOG
         shell: bash
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
         run: |
-          tag="${GITHUB_REF_NAME}"          # e.g. v0.7.0
+          tag="${TAG}"                      # e.g. v0.7.0
           ver="${tag#v}"                    # e.g. 0.7.0
           # Write the matching CHANGELOG section straight to a file.
           # Avoids round-tripping the body through Actions expression
@@ -181,9 +211,12 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.build.outputs.tag }}
         run: |
-          tag="${GITHUB_REF_NAME}"
-          gh release create "$tag" dist/* \
+          # --target creates the tag on this commit when the run came from
+          # workflow_dispatch; on a tag push the tag already exists there.
+          gh release create "$TAG" dist/* \
+            --target "$GITHUB_SHA" \
             --repo "${{ github.repository }}" \
             --title "CCV $tag" \
             --notes-file release-notes.md
